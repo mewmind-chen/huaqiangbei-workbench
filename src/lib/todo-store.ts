@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { upsertItem, upsertItems, removeItem } from "@/lib/data/desk";
-import type { ItemStatus, ItemType, TodoItem } from "@/lib/types";
+import type { ItemPriority, ItemStatus, ItemType, TodoItem } from "@/lib/types";
 import { addDaysKeepTime, defaultDue, isPastDay, nowLocal } from "@/lib/dates";
 import { useWorkbenchStore } from "@/lib/workbench-store";
 
@@ -10,6 +10,7 @@ type Draft = {
   content: string;
   amount: string;
   dueAt: string;
+  priority: ItemPriority;
 };
 
 type State = {
@@ -22,6 +23,7 @@ type State = {
     content: string;
     amount: number | null;
     dueAt?: string | null;
+    priority?: ItemPriority;
   }) => TodoItem;
   updateItem: (id: string, patch: Partial<TodoItem>) => TodoItem | null;
   deleteItem: (id: string) => void;
@@ -37,6 +39,7 @@ const emptyDraft = (): Draft => ({
   content: "",
   amount: "",
   dueAt: "",
+  priority: "普通",
 });
 
 function uid() {
@@ -51,7 +54,16 @@ export const useTodoStore = create<State>()((set, get) => ({
   items: [],
   hydrated: false,
   initialized: false,
-  hydrate: (items) => set({ items, hydrated: true, initialized: true }),
+  hydrate: (items) =>
+    set({
+      items: items.map((it) => ({
+        ...it,
+        priority: it.priority === "紧急" || it.priority === "重要" ? it.priority : "普通",
+        followUp: it.followUp || "",
+      })),
+      hydrated: true,
+      initialized: true,
+    }),
   addItem: (input) => {
     const dueAt = input.dueAt || defaultDue();
     const item: TodoItem = {
@@ -61,6 +73,8 @@ export const useTodoStore = create<State>()((set, get) => ({
       content: input.content.trim(),
       amount: input.amount,
       status: "待处理",
+      priority: input.priority || "普通",
+      followUp: "",
       dueAt,
       dueDefault: !input.dueAt,
       createdAt: nowLocal(),

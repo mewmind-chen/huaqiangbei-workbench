@@ -50,6 +50,39 @@ export function isOverdue(item: { status: string; dueAt: string }, now = new Dat
   return !!d && d.getTime() <= now.getTime();
 }
 
+export function isDueToday(item: { status: string; dueAt: string }, now = new Date()): boolean {
+  if (item.status === "已完成") return false;
+  return dayKeyFromDue(item.dueAt) === formatDayKey(now);
+}
+
+export function overdueLabel(dueAt: string, now = new Date()): string {
+  const d = parseLocal(dueAt);
+  if (!d) return "";
+  const min = Math.floor((now.getTime() - d.getTime()) / 60000);
+  if (min < 60) return `${Math.max(min, 0)} 分钟`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h} 小时`;
+  return `${Math.floor(h / 24)} 天`;
+}
+
+export function addHours(hours: number, now = new Date()): string {
+  const d = new Date(now.getTime() + hours * 3600000);
+  return toLocalInput(d);
+}
+
+export function todayOffWork(now = new Date()): string {
+  const d = new Date(now);
+  d.setHours(19, 0, 0, 0);
+  return toLocalInput(d);
+}
+
+export function tomorrowOffWork(now = new Date()): string {
+  const d = new Date(now);
+  d.setDate(d.getDate() + 1);
+  d.setHours(19, 0, 0, 0);
+  return toLocalInput(d);
+}
+
 export function isPastDay(value: string, now = new Date()): boolean {
   const d = parseLocal(value);
   if (!d) return false;

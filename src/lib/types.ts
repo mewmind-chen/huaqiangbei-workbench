@@ -10,10 +10,13 @@ export const ITEM_TYPES = [
 
 export const STATUSES = ["待处理", "处理中", "已完成"] as const;
 
+export const PRIORITIES = ["普通", "重要", "紧急"] as const;
+
 export const QUOTE_STATUSES = ["待报价", "已报价", "已完成"] as const;
 
 export type ItemType = (typeof ITEM_TYPES)[number];
 export type ItemStatus = (typeof STATUSES)[number];
+export type ItemPriority = (typeof PRIORITIES)[number];
 export type QuoteStatus = (typeof QUOTE_STATUSES)[number];
 
 export type TodoItem = {
@@ -23,6 +26,8 @@ export type TodoItem = {
   content: string;
   amount: number | null;
   status: ItemStatus;
+  priority: ItemPriority;
+  followUp: string;
   dueAt: string;
   dueDefault: boolean;
   createdAt: string;

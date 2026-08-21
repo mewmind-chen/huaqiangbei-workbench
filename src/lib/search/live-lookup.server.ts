@@ -21,7 +21,8 @@ import type {
 } from "@/lib/search/result-types";
 
 function getFirecrawlKey(): string {
-  if (process.env.FIRECRAWL_API_KEY) return process.env.FIRECRAWL_API_KEY;
+  const fromEnv = String(process.env.FIRECRAWL_API_KEY || "").trim();
+  if (fromEnv) return fromEnv;
   const paths = [
     join(process.cwd(), "fetcher-config.json"),
     join(process.cwd(), "artifacts/工作台研究/TodoApp-Mac版/fetcher-config.json"),

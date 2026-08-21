@@ -25,4 +25,5 @@ attachments/
 .grok/skills/
 .grok/references/
 .grok/status
+.project_id
 node_modules.lock

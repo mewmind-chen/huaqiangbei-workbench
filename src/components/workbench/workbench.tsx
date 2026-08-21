@@ -66,8 +66,8 @@ export function Workbench() {
       <header className="border-b border-line bg-surface-2">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <div>
-            <p className="text-[11px] tracking-[0.18em] text-muted uppercase">Huaqiangbei Desk</p>
-            <h1 className="mt-0.5 text-xl font-semibold tracking-tight sm:text-2xl">华强北工作台</h1>
+            <p className="text-[11px] tracking-[0.18em] text-muted uppercase">Desk</p>
+            <h1 className="mt-0.5 text-xl font-semibold tracking-tight sm:text-2xl">工作台</h1>
           </div>
           <div className="text-xs tabular-nums text-muted">{clock}</div>
         </div>

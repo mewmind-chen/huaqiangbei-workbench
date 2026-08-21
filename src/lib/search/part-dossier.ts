@@ -16,7 +16,7 @@ const CATALOG: { test: RegExp; knowledge: Knowledge }[] = [
     test: /^STM32F103C8/i,
     knowledge: {
       family: "STM32F1 主流增强型（medium-density）",
-      what: "ST 的入门工控 MCU。Cortex-M3、72MHz，C8 这一档是 64KB Flash / 20KB SRAM，常见 LQFP-48（7×7）。华强北说「48 脚 F103」多半指这颗。学习板 Blue Pill 也是它。",
+      what: "ST 的入门工控 MCU。Cortex-M3、72MHz，C8 这一档是 64KB Flash / 20KB SRAM，常见 LQFP-48（7×7）。货场说「48 脚 F103」多半指这颗。学习板 Blue Pill 也是它。",
       use: "电机 PWM、USB 从机、CAN 总线、小型 PLC 外围、手持终端、对讲和打印机控制板。",
       customers: "电控厂、工控方案商、医疗手持、楼宇对讲、办公外设。",
       notes: [

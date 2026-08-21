@@ -1,9 +1,6 @@
 import { getSql } from "@/lib/db";
-import { detectQuery } from "@/lib/search/md-parse";
 import { reportSummary } from "@/lib/search/analyze";
 import type { LookupRecord } from "@/lib/search/result-types";
-import { seedItems } from "@/lib/seed";
-import { nowLocal } from "@/lib/dates";
 import type {
   CustomerRecord,
   PooledPart,
@@ -25,6 +22,8 @@ type ItemRow = {
   done_at: string | null;
   carry_count: number;
   due_orig: string | null;
+  priority?: string;
+  follow_up?: string;
 };
 
 type QuoteRow = {
@@ -76,6 +75,8 @@ function mapItem(r: ItemRow): TodoItem {
     doneAt: r.done_at,
     carryCount: Number(r.carry_count || 0),
     dueOrig: r.due_orig,
+    priority: r.priority === "紧急" || r.priority === "重要" ? r.priority : "普通",
+    followUp: r.follow_up || "",
   };
 }
 
@@ -122,8 +123,8 @@ export async function upsertItemRow(item: TodoItem) {
   await sql.query(
     `insert into items (
       id, customer, type, content, amount, status, due_at, due_default,
-      created_at, done_at, carry_count, due_orig
-    ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+      created_at, done_at, carry_count, due_orig, priority, follow_up
+    ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
     on conflict (id) do update set
       customer = excluded.customer,
       type = excluded.type,
@@ -134,7 +135,9 @@ export async function upsertItemRow(item: TodoItem) {
       due_default = excluded.due_default,
       done_at = excluded.done_at,
       carry_count = excluded.carry_count,
-      due_orig = excluded.due_orig`,
+      due_orig = excluded.due_orig,
+      priority = excluded.priority,
+      follow_up = excluded.follow_up`,
     [
       item.id,
       item.customer,
@@ -148,6 +151,8 @@ export async function upsertItemRow(item: TodoItem) {
       item.doneAt,
       item.carryCount,
       item.dueOrig,
+      item.priority || "普通",
+      item.followUp || "",
     ],
   );
 }
@@ -235,39 +240,19 @@ export async function getReportRow(id: string): Promise<LookupRecord | null> {
   return typeof raw === "string" ? (JSON.parse(raw) as LookupRecord) : (raw as LookupRecord);
 }
 
-async function seedQuotesFromItems(items: TodoItem[]) {
-  for (const item of items) {
-    if (item.type !== "报价" || item.status === "已完成") continue;
-    const found = detectQuery(item.content);
-    const mpns = found.kind === "part" ? found.candidates : [];
-    await upsertCustomerRow({
-      id: `cust-${item.customer}`,
-      name: item.customer,
-      createdAt: item.createdAt,
-    });
-    for (const mpn of mpns) {
-      await upsertQuoteRow({
-        id: `quote-${item.id}-${mpn}`,
-        customer: item.customer,
-        mpn,
-        itemId: item.id,
-        status: "待报价",
-        content: item.content.slice(0, 500),
-        createdAt: nowLocal(),
-        updatedAt: nowLocal(),
-      });
-    }
-  }
+async function purgeDemoRows() {
+  const sql = await getSql();
+  await sql.query("delete from items where id like $1", ["seed-%"]);
+  await sql.query("delete from quote_lines where id like $1 or item_id like $2", ["quote-seed-%", "seed-%"]);
+  await sql.query("delete from customers where id like $1", ["cust-%"]);
+  await sql.query("delete from items where customer = $1 and content like $2", ["李工", "%W25Q64JV%"]);
+  await sql.query("delete from quote_lines where customer = $1 and mpn = $2", ["李工", "W25Q64JV"]);
 }
 
 export async function loadDeskData() {
+  await purgeDemoRows();
   const sql = await getSql();
-  let items = (await sql.query<ItemRow>("select * from items order by created_at desc")).map(mapItem);
-  if (!items.length) {
-    items = seedItems();
-    for (const item of items) await upsertItemRow(item);
-    await seedQuotesFromItems(items);
-  }
+  const items = (await sql.query<ItemRow>("select * from items order by created_at desc")).map(mapItem);
   const quotes = (await sql.query<QuoteRow>("select * from quote_lines order by updated_at desc")).map(mapQuote);
   const parts = (await sql.query<PartRow>("select * from parts order by created_at desc")).map(mapPart);
   const customers = (await sql.query<CustomerRow>("select * from customers order by created_at desc")).map(
