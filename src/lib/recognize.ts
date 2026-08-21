@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
+import { mergeRecognized } from "@/lib/todo-infer";
 import { ITEM_TYPES, type RecognizeDraft } from "@/lib/types";
 
 const PROMPT = `你正在识别一张微信/QQ聊天记录截图。
 - 顶部标题栏是群名/好友名；消息是气泡；发送者昵称是彩色小字
 - 屏幕左侧气泡通常是客户/对方发来的，右侧是自己发的
-- 客户名字优先从截图左上角标题栏提取
+- 客户名字优先从截图左上角标题栏提取：格式「公司名（昵称）」；昵称含公司/地名时拆开，如「不到长城非好汉 东莞 晶冠」→「东莞晶冠（不到长城非好汉）」
 
 提取【客户/对方发来的】所有业务消息，一条消息一条记录，不要合并。
 只输出 JSON，不要其他文字：
@@ -70,6 +71,23 @@ export const recognizeChatShot = createServerFn({ method: "POST" })
       return { ok: false as const, error: "图片过大，请换一张更小的截图" };
     }
     const mime = data.mime === "image/png" ? "image/png" : "image/jpeg";
+    const payload = {
+      model: "grok-4.20-0309-non-reasoning",
+      max_tokens: 500,
+      temperature: 0,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: { url: `data:${mime};base64,${data.image}`, detail: "low" },
+            },
+            { type: "text", text: PROMPT },
+          ],
+        },
+      ],
+    };
     let res: Response;
     try {
       res = await fetch("https://api.x.ai/v1/chat/completions", {
@@ -78,25 +96,20 @@ export const recognizeChatShot = createServerFn({ method: "POST" })
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-          model: "grok-4.5",
-          max_tokens: 1200,
-          temperature: 0.1,
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "image_url",
-                  image_url: { url: `data:${mime};base64,${data.image}` },
-                },
-                { type: "text", text: PROMPT },
-              ],
-            },
-          ],
-        }),
-        signal: AbortSignal.timeout(45_000),
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(20_000),
       });
+      if (res.status >= 500) {
+        res = await fetch("https://api.x.ai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({ ...payload, model: "grok-4.3" }),
+          signal: AbortSignal.timeout(20_000),
+        });
+      }
     } catch {
       return { ok: false as const, error: "识别超时，请换一张更清晰的截图再试" };
     }
@@ -108,7 +121,7 @@ export const recognizeChatShot = createServerFn({ method: "POST" })
     };
     const text = body.choices?.[0]?.message?.content ?? "";
     try {
-      return { ok: true as const, items: extractItems(text) };
+      return { ok: true as const, items: [mergeRecognized(extractItems(text))] };
     } catch (err) {
       return {
         ok: false as const,

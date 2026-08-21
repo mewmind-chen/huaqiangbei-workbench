@@ -42,6 +42,7 @@ export type RecognizeDraft = {
   content: string;
   amount: number | null;
   dueAt: string | null;
+  priority?: ItemPriority;
 };
 
 export type QuoteLine = {
