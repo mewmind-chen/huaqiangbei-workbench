@@ -1,0 +1,28 @@
+node_modules/
+dist/
+.output/
+.nitro/
+.vercel/
+.cache/
+*.log
+.env
+.env.*
+!.env.example
+
+# local scrape key — never commit
+fetcher-config.json
+key.txt
+
+# preview / sandbox clutter
+artifacts/
+screenshots/
+attachments/
+*.db
+*.db-shm
+*.db-wal
+
+# grok builder internals
+.grok/skills/
+.grok/references/
+.grok/status
+node_modules.lock
