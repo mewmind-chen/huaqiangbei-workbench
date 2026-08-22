@@ -215,6 +215,7 @@ function evidenceFromSteps(query: string, outcomes: StepOutcome[]) {
     lcsc: "high",
     findchips: "high",
     hqew: "medium",
+    icnet: "medium",
     gys: "medium",
     shop: "medium",
     intel: "low",
@@ -224,7 +225,7 @@ function evidenceFromSteps(query: string, outcomes: StepOutcome[]) {
     if (!o.ok) continue;
     if (o.step !== "intel" && !("identity" in o) && !("offers" in o) && !("companies" in o)) continue;
     items.push({
-      sourceKey: o.step === "intel" ? "intel" : (o.step as "lcsc" | "hqew" | "st" | "gys" | "shop" | "findchips"),
+      sourceKey: o.step === "intel" ? "intel" : (o.step as "lcsc" | "hqew" | "st" | "gys" | "shop" | "findchips" | "icnet"),
       url: o.url || "",
       title: `${query} @ ${o.step}`,
       capturedAt: nowIso(),

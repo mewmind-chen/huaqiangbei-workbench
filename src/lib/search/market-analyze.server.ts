@@ -141,7 +141,9 @@ export function computeMarketAnalysis(input: MarketAnalyzeInput): MarketAnalysis
     trendScore = drop > 0.3 ? 85 : drop > 0.1 ? 55 : drop > 0 ? 30 : 10;
     trendDetail = `授权库存 ${previous.lcscStock} → ${latest.lcscStock}(${(drop * 100).toFixed(1)}%)`;
   }
-  const hqewOffersNow = latest?.hqewOfferCount ?? offers.filter((o) => o.sourceKey === "hqew").length;
+  // 审查#3 B4: 仅当存在快照(latest)时才认定挂货规模为"已确认数据";
+  // 无快照时该信号缺失(-1), 绝不用兜底 0 冒充"确认零挂货"算出高分缺货。
+  const hqewOffersNow = latest?.hqewOfferCount ?? (latest ? offers.filter((o) => o.sourceKey === "hqew").length : null);
   const supplyScale = hqewOffersNow == null ? 0 : hqewOffersNow >= 30 ? 15 : hqewOffersNow >= 10 ? 40 : hqewOffersNow > 0 ? 65 : 90;
   const shortSignals: AnalyzeSignal[] = [
     { name: "授权库存水平", value: lcscStock, score: authKnown ? authStockScore : -1, weight: 0.5 },

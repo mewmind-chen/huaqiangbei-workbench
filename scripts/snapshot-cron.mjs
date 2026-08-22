@@ -21,11 +21,11 @@ const args = Object.fromEntries(
     return m ? [m[1], m[2] ?? true] : [a, true];
   }),
 );
-const MAX = Math.min(Number(args.max ?? 20) || 20, 50);
+const MAX = Math.min(Math.max(Number(args.max ?? 20) || 20, 1), 50); // 钳制 1..50(审查#3)
 const STEPS = String(args.steps ?? "lcsc,hqew")
   .split(",")
   .filter((s) => ["lcsc", "hqew"].includes(s));
-const GAP_MS = Number(args.gapMs ?? 8000);
+const GAP_MS = Math.max(Number(args.gapMs ?? 8000) || 8000, 2000); // 下限 2s 保护配额(审查#3)
 
 async function api(path, body) {
   const headers = { "content-type": "application/json" };

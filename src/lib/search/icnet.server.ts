@@ -54,13 +54,10 @@ export async function fetchIcnetOffers(
     md = await scrapeMarkdown(url, 3000);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "fetch failed";
-    // 登录失效时站点会把页面替换回扫码墙 —— 识别并如实上报
-    if (/login\.php|微信|扫码|scan/.test(md) || /抓取失败/.test(msg)) {
-      return { status: "auth_required", detail: `IC交易网会话可能已失效(${msg}), 请更新 Cookie。` };
-    }
+    // fetch 已失败时 md 必为空串, 直接上报错误(审查#3: 移除恒假的正则死检查)
     return { status: "error", detail: msg };
   }
-  if (/member\.ic\.net\.cn\/login|扫码|二维码/.test(md)) {
+  if (/member\.ic\.net\.cn\/login/.test(md) || /name="(username|password)"/i.test(md)) {
     return { status: "auth_required", detail: "IC交易网会话已过期, 请重新复制 Cookie。" };
   }
   const offers = parseIcnetOffers(md, url);
@@ -81,9 +78,9 @@ export function parseIcnetOffers(markdown: string, pageUrl: string): LiveOffer[]
     const cells = line.split("|").map((c) => c.trim()).filter(Boolean);
     if (cells.length < 4) continue;
     // 行内必须出现 ¥ 或纯数字价格, 且有一格像数量
-    const priceCell = cells.find((c) => /^[¥￥]\s*[\d.]+$/.test(c));
+    const priceCell = cells.find((c) => /^[¥￥]\s*[\d,]+(?:\.\d+)?$/.test(c));
     if (!priceCell) continue;
-    const price = Number(priceCell.replace(/[¥￥]/g, ""));
+    const price = Number(priceCell.replace(/[¥￥,\s]/g, ""));
     if (!(price > 0)) continue;
     const stockCell = cells.find((c) => /^\d{2,}$/.test(c.replace(/[, ]/g, "")));
     const stock = stockCell ? Number(stockCell.replace(/[, ]/g, "")) : null;
