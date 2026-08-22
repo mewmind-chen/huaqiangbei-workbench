@@ -60,5 +60,13 @@ report: {
   risk:      {items[](每条挂 evidenceId)},
   recommendation: {action, targetCustomers[], reasoning}
 }
-verdict: {state, score, confidence, claims[](每条 claim 注明 evidenceId)}
+verdict: {
+  state,        // 热门/缺货/涨价/平稳/未知(证据不足时必须用"未知")
+  score,        // 0-100
+  confidence,   // high | medium | low
+  claims: [     // 每条结论性断言一条, evidenceId 必须真实存在(程序硬校验)
+    { text: "...", evidenceId: "evi-..." }
+  ]
+}
+// state ≠ "未知" 时至少要有一条证据引用, 否则 report_save 返回 422
 ```

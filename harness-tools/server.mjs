@@ -198,16 +198,24 @@ server.tool(
 
 server.tool(
   "report_save",
-  "保存最终研究报告(入库 research_reports 并被工作台消费)。verdict 结构:{state(热门/缺货/涨价/平稳/未知), score, confidence, claims[]};每个 claim 必须给出 evidenceIds 中对应的证据。硬校验:evidenceIds 引用不存在的证据将返回 422 且不入库。",
+  "保存最终研究报告(入库 research_reports 并被工作台消费)。verdict 必须为结构化对象:{state(如 热门/缺货/涨价/平稳/未知), score(0-100), confidence(high|medium|low), claims:[{text, evidenceId}]} —— 每条 claim 必须挂一个真实存在的证据 id;state≠未知 时至少要有一条证据引用,否则 422 拒绝入库。",
   {
     taskId: z.string().optional(),
     query: z.string().min(1).max(120),
     kind: z.enum(["part", "company"]).default("part"),
-    verdict: z.record(z.string(), z.unknown()),
-    report: z.record(z.string(), z.unknown()),
+    verdict: z.object({
+      state: z.string().min(1).max(30),
+      score: z.number().min(0).max(100),
+      confidence: z.enum(["high", "medium", "low"]),
+      claims: z
+        .array(z.object({ text: z.string().min(1).max(600), evidenceId: z.string().min(1).max(64) }))
+        .max(50)
+        .default([]),
+    }),
+    report: z.record(z.string(), z.unknown()).optional(),
     evidenceIds: z.array(z.string()).max(200).default([]),
   },
-  async (args) => call("report.save", args),
+  async (args) => call("report.save", { report: {}, ...args }),
 );
 
 server.tool(

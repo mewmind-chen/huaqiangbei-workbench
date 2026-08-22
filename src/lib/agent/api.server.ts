@@ -128,11 +128,25 @@ const SnapshotSaveInput = z.object({
   raw: z.record(z.string(), z.unknown()).default({}),
 });
 
+// 审查#2 必改1: verdict 结构程序级固化 —— state 有界、score 0-100、confidence 三档、
+// claims 结构化且每条必须携带 evidenceId(内容真伪由证据引用链保证)。
+const ClaimSchema = z.object({
+  text: z.string().trim().min(1).max(600),
+  evidenceId: z.string().trim().min(1).max(64),
+});
+
+const VerdictSchema = z.object({
+  state: z.string().trim().min(1).max(30),
+  score: z.number().min(0).max(100),
+  confidence: z.enum(["high", "medium", "low"]),
+  claims: z.array(ClaimSchema).max(50).default([]),
+});
+
 const ReportSaveInput = z.object({
   taskId: z.string().trim().max(64).optional(),
   query: z.string().trim().min(1).max(120),
   kind: z.enum(["part", "company"]).default("part"),
-  verdict: z.record(z.string(), z.unknown()).default({}),
+  verdict: VerdictSchema,
   report: z.record(z.string(), z.unknown()).default({}),
   evidenceIds: z.array(z.string().trim().min(1).max(64)).max(200).default([]),
 });
@@ -501,24 +515,34 @@ async function taskDetail(input: { taskId: string }) {
     evidenceChainValid:
       reports.length === 0 ||
       (() => {
+        // 审查#2必改2: 双路径扫描 —— 顶层 evidence_ids + verdict.claims[].evidenceId
         const have = new Set(evidence.map((e) => e.id as string));
-        return reports.every((r) =>
-          ((r.evidence_ids as string[]) ?? []).every((id) => have.has(id)),
-        );
+        return reports.every((r) => {
+          const verdict = (r.verdict ?? {}) as { claims?: { evidenceId?: string }[] };
+          const claimRefs = (verdict.claims ?? []).map((c) => c.evidenceId ?? "").filter(Boolean);
+          const top = Array.isArray(r.evidence_ids) ? (r.evidence_ids as string[]) : [];
+          return [...top, ...claimRefs].every((id) => have.has(id));
+        });
       })(),
   };
 }
 
 async function saveReport(data: z.infer<typeof ReportSaveInput>) {
   const sql = await getSql();
-  // 硬校验(M5):引用的证据必须真实存在,否则拒绝入库。
-  if (data.evidenceIds.length) {
+  // 硬校验(M5, 审查#2必改1): 顶层 evidenceIds 与 verdict.claims[].evidenceId
+  // 全部合并校验存在性; 有结论(state≠未知)时必须至少引用一条真实证据。
+  const claimRefs = data.verdict.claims.map((c) => c.evidenceId);
+  const allRefs = [...new Set([...data.evidenceIds, ...claimRefs])];
+  if (data.verdict.state !== "未知" && allRefs.length === 0) {
+    throw new ApiError("non-unknown verdict requires at least one evidence reference", 422);
+  }
+  if (allRefs.length) {
     const found = await sql.query<{ id: string }>(
       `select id from evidence_items where id = any($1::text[])`,
-      [data.evidenceIds],
+      [allRefs],
     );
     const have = new Set(found.map((r) => r.id));
-    const missing = data.evidenceIds.filter((id) => !have.has(id));
+    const missing = allRefs.filter((id) => !have.has(id));
     if (missing.length) {
       throw new ApiError(`unknown evidence_ids: ${missing.join(",")}`, 422);
     }
