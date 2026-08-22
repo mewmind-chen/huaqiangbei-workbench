@@ -95,7 +95,7 @@ const LookupStepInput = z.object({
 const LookupFullInput = z.object({
   taskId: z.string().trim().max(64).optional(),
   query: z.string().trim().min(1).max(80),
-  steps: z.array(z.enum(["lcsc", "st", "hqew", "intel"])).min(1).default(["lcsc", "hqew", "intel"]),
+  steps: z.array(z.enum(["lcsc", "st", "hqew", "intel", "findchips", "icnet"])).min(1).max(6).default(["lcsc", "hqew", "intel"]),
 });
 
 const EvidenceItemSchema = z.object({
@@ -312,7 +312,10 @@ async function lookupStep(data: z.infer<typeof LookupStepInput>) {
 }
 
 async function lookupFull(data: z.infer<typeof LookupFullInput>) {
+  const { assessParseHealth } = await import("@/lib/search/parse-health.server");
+  type HealthEntry = ReturnType<typeof assessParseHealth>;
   const outcomes: StepOutcome[] = [];
+  const healthByStep = new Map<string, HealthEntry>();
   // 审查 H: 服务端总预算(每步最坏 ~60-80s, 全链可能超客户端 150s 超时)。
   // 超预算即截断并如实标注, 让模型拿到的结果与实际执行一致。
   const startedAt = Date.now();
@@ -323,7 +326,12 @@ async function lookupFull(data: z.infer<typeof LookupFullInput>) {
       truncated = true;
       break;
     }
-    outcomes.push(await runLookupStep({ query: data.query, step }));
+    const outcome = await runLookupStep({ query: data.query, step });
+    // 数据准确性保险#1: 解析健康体检
+    if (outcome.ok && outcome.offers?.length) {
+      healthByStep.set(outcome.step, assessParseHealth(outcome.step, outcome.offers));
+    }
+    outcomes.push(outcome);
   }
   const offers = offersFrom(outcomes);
   const identity = identityFrom(outcomes);
@@ -348,7 +356,13 @@ async function lookupFull(data: z.infer<typeof LookupFullInput>) {
     if ("evidenceIds" in saved) evidenceIds = saved.evidenceIds;
   }
   let snapshotId: string | null = null;
-  const metrics = metricsFromOffers(offers);
+  // 数据准确性保险#1: 不健康的解析结果不写入市场快照(评分链路)
+  const unhealthySteps = [...healthByStep.entries()].filter(([, h]) => !h.healthy).map(([k]) => k);
+  const snapshotBlocked = unhealthySteps.length > 0;
+  const trustedOffers = snapshotBlocked
+    ? offers.filter((o) => healthByStep.get(o.sourceKey)?.healthy !== false)
+    : offers;
+  const metrics = metricsFromOffers(trustedOffers);
   if (offers.length || identity?.lcscStock != null) {
     const saved = await saveSnapshot({
       mpn: data.query,
@@ -361,7 +375,7 @@ async function lookupFull(data: z.infer<typeof LookupFullInput>) {
         priceMin: metrics.priceMin,
         priceMax: metrics.priceMax,
       },
-      raw: { offers },
+      raw: { offers: trustedOffers },
     });
     if ("snapshotId" in saved) snapshotId = saved.snapshotId;
   }
@@ -391,6 +405,11 @@ async function lookupFull(data: z.infer<typeof LookupFullInput>) {
     extraKnowledge: extraKnowledge(data.query),
     evidenceIds,
     snapshotId,
+    parseHealth: Object.fromEntries(healthByStep),
+    snapshotDegraded: snapshotBlocked,
+    degradedReason: snapshotBlocked
+      ? `解析健康检查未通过: ${unhealthySteps.join(",")}(本次数据未写入市场快照)`
+      : undefined,
     truncated,
     truncatedSteps: truncated
       ? data.steps.slice(outcomes.length)

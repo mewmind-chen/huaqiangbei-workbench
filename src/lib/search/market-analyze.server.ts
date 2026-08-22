@@ -18,6 +18,8 @@ export type AnalyzeOffer = {
   sourceKey?: string;
   currency?: string;
   price?: number | null;
+  stock?: number | null;
+  model?: string;
 };
 
 export type SnapshotPoint = {
@@ -43,8 +45,17 @@ export type MetricResult = {
   basis: string; // 一句话依据(供报告引用)
 };
 
+export type CrossCheck = {
+  /** 各源对该型号的存在性判定: true=确认有货/有数据, false=确认无, null=无数据 */
+  existence: { lcsc: boolean | null; hqew: boolean | null; findchips: boolean | null };
+  /** yes=多源一致确认; partial=仅单一渠道确认(其余未知); no=源间明确矛盾; unknown=数据不足 */
+  verdict: "yes" | "partial" | "no" | "unknown";
+  notes: string[];
+};
+
 export type MarketAnalysis = {
   mpn: string;
+  crossCheck: CrossCheck;
   hotness: MetricResult;
   shortage: MetricResult;
   priceTrend: MetricResult;
@@ -192,14 +203,47 @@ export function computeMarketAnalysis(input: MarketAnalyzeInput): MarketAnalysis
   ];
   const priceActive = priceSignals.filter((s) => s.score >= 0);
   const price = weighted(priceActive.length ? priceActive : []);
+  const priceTrendBasisRef: { basis: string | null } = {
+    basis: seriesKnown ? seriesDetail : premiumKnown ? premiumDetail : null,
+  };
 
   // 数据基准时间 = 最新快照; 引擎不读时钟 —— 同输入必同输出(G2)
   const dataCutoff = latest?.capturedAt ?? "";
   const oldestDays =
     sorted.length >= 1 && dataCutoff ? Math.round(daysBetween(sorted[0].capturedAt, dataCutoff)) : null;
 
+  /* --------------------- 数据准确性保险#2: 跨源交叉标记 --------------------- */
+  // 存在性三态: 明确有 / 明确无 / 无数据。注意"无数据"不等于"无货"。
+  const lcscExists: boolean | null =
+    latest?.lcscStock == null ? null : latest.lcscStock > 0;
+  const hqewOffersConfirmed = latest?.hqewOfferCount ?? null;
+  const hqewExists: boolean | null =
+    hqewOffersConfirmed == null ? null : hqewOffersConfirmed > 0;
+  const fcRows = offers.filter((o) => o.sourceKey === "findchips");
+  const findchipsExists: boolean | null =
+    offers.length && sourcesSeen.includes("findchips") ? fcRows.some((o) => (o.stock ?? 0) > 0) || fcRows.length > 0 : null;
+  const knownSources = [lcscExists, hqewExists, findchipsExists].filter((v) => v !== null);
+  let crossVerdict: CrossCheck["verdict"] = "unknown";
+  if (knownSources.length >= 2) {
+    const positives = knownSources.filter(Boolean).length;
+    const negatives = knownSources.length - positives;
+    crossVerdict = negatives === 0 ? "yes" : positives > 0 ? "partial" : "no";
+    // 全部明确无货才允许说 no(缺货信号), 有任一存在即不可下"全市场无货"结论
+  } else if (knownSources.length === 1) {
+    crossVerdict = "partial";
+  }
+  const notes: string[] = [];
+  if (lcscExists !== null) notes.push(`立创授权库存 ${latest?.lcscStock} pcs`);
+  if (hqewExists !== null) notes.push(`华强挂货 ${hqewOffersConfirmed} 条`);
+  if (findchipsExists !== null)
+    notes.push(`Findchips 海外分销 ${fcRows.filter((o) => (o.stock ?? 0) > 0).length} 家在售`);
+  if (crossVerdict === "no") notes.push("⚠ 多源一致显示无货 —— 缺货判断获得跨源支撑");
+  if (crossVerdict === "yes") notes.push("多源一致确认有货");
+  if ((priceTrendBasisRef.basis ?? "").includes("溢价")) notes.push("现货价与授权价并列展示, 币种/口径不同请勿直接相减");
+
   return {
     mpn,
+    crossCheck: { existence: { lcsc: lcscExists, hqew: hqewExists, findchips: findchipsExists }, verdict: crossVerdict, notes },
     hotness: {
       score: hot.score,
       level: levelOf(hot.score),
@@ -221,7 +265,7 @@ export function computeMarketAnalysis(input: MarketAnalyzeInput): MarketAnalysis
       level: levelOf(price.score),
       confidence: price.confidence,
       signals: priceActive.map((s) => ({ ...s })),
-      basis: seriesKnown ? seriesDetail : premiumKnown ? premiumDetail : "无价格时间序列, 无法判断涨跌",
+      basis: priceTrendBasisRef.basis ?? "无价格时间序列, 无法判断涨跌",
     },
     dataBasis: {
       snapshotCount: sorted.length,

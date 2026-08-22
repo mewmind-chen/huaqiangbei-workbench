@@ -17,7 +17,8 @@
     "test": "node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/auth/gate-identity.test.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "snapshot:cron": "node scripts/snapshot-cron.mjs"
+    "snapshot:cron": "node scripts/snapshot-cron.mjs",
+    "check:golden": "node scripts/golden-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

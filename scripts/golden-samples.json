@@ -1,0 +1,49 @@
+{
+  "note": "黄金样本: 人工核对基准。npm run check:golden -- --live 对照。库存±35%波动, 价格档语义=最小数量档。",
+  "verifiedAt": "2026-08-22",
+  "samples": [
+    {
+      "mpn": "NE555P",
+      "source": "lcsc",
+      "groundTruth": {
+        "stockBetween": [
+          4700,
+          9800
+        ],
+        "note": "2026-08-22 实测 7248pcs"
+      }
+    },
+    {
+      "mpn": "NE555P",
+      "source": "hqew",
+      "groundTruth": {
+        "minOffers": 20,
+        "note": "2026-08-22 实测 40 条挂货"
+      }
+    },
+    {
+      "mpn": "NE555P",
+      "source": "findchips",
+      "groundTruth": {
+        "minOffers": 3,
+        "authorizedMinCount": 2,
+        "note": "授权分销名单随结果集波动, 断言数量不点名单"
+      }
+    },
+    {
+      "mpn": "TPS54560DDAR",
+      "source": "lcsc",
+      "groundTruth": {
+        "minOffers": 1,
+        "brandContains": "TI"
+      }
+    },
+    {
+      "mpn": "STM32F103C8T6",
+      "source": "lcsc",
+      "groundTruth": {
+        "minOffers": 1
+      }
+    }
+  ]
+}
