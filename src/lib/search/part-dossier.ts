@@ -1,6 +1,6 @@
 import { orderedSpecs, partPositioning, translateApps } from "@/lib/search/analyze";
 import type { LcscAlt } from "@/lib/search/md-parse";
-import type { PartIdentity } from "@/lib/search/result-types";
+import type { IntelBrief, PartIdentity } from "@/lib/search/result-types";
 
 export type Knowledge = {
   family: string;
@@ -130,19 +130,30 @@ export function extraKnowledge(mpn: string): Knowledge | null {
   return hit ? hit.knowledge : null;
 }
 
-export function buildDossier(identity: PartIdentity, alts: LcscAlt[]) {
+export function buildDossier(identity: PartIdentity, alts: LcscAlt[], intel?: IntelBrief | null) {
   const extra = extraKnowledge(identity.mpn);
   const specs = orderedSpecs(identity.specs);
   const apps = translateApps(identity.applications || []);
   const replacements = alts.filter((a) => a.mpn.toUpperCase() !== identity.mpn.toUpperCase()).slice(0, 8);
   const who = [...new Set(apps.map((a) => a.who).filter(Boolean))];
+  const catalogNotes = extra?.notes || [];
+  const intelNotes = (intel?.notes || []).filter(
+    (n) => !catalogNotes.some((e) => e.slice(0, 24) === n.slice(0, 24)),
+  );
+  const liveNotes = [...catalogNotes, ...intelNotes].slice(0, 8);
   return {
     extra,
+    liveNotes,
     specs,
     apps,
     replacements,
     who,
     positioning: partPositioning(identity),
-    headline: identity.summary || extra?.what.split("。")[0] || identity.category || identity.mpn,
+    headline:
+      extra?.what.split("。")[0] ||
+      identity.summary ||
+      intel?.summary ||
+      identity.category ||
+      identity.mpn,
   };
 }

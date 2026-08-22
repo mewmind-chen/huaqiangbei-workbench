@@ -1,10 +1,18 @@
 import { Badge } from "@/components/ui/badge";
 import { buildDossier } from "@/lib/search/part-dossier";
 import type { LcscAlt } from "@/lib/search/md-parse";
-import type { PartIdentity } from "@/lib/search/result-types";
+import type { IntelBrief, PartIdentity } from "@/lib/search/result-types";
 
-export function PartArchive({ identity, alts }: { identity: PartIdentity; alts: LcscAlt[] }) {
-  const d = buildDossier(identity, alts);
+export function PartArchive({
+  identity,
+  alts,
+  intel,
+}: {
+  identity: PartIdentity;
+  alts: LcscAlt[];
+  intel?: IntelBrief | null;
+}) {
+  const d = buildDossier(identity, alts, intel);
   const extra = d.extra;
 
   return (
@@ -30,7 +38,7 @@ export function PartArchive({ identity, alts }: { identity: PartIdentity; alts: 
           {extra?.what && extra.what !== d.headline ? (
             <p className="mt-2 text-sm leading-relaxed text-ink">{extra.what}</p>
           ) : null}
-          {identity.features ? (
+          {identity.features && identity.features !== d.headline ? (
             <p className="mt-2 text-sm leading-relaxed text-muted">{identity.features}</p>
           ) : identity.desc && identity.desc !== identity.summary ? (
             <p className="mt-2 text-sm leading-relaxed text-muted">{identity.desc}</p>
@@ -75,20 +83,25 @@ export function PartArchive({ identity, alts }: { identity: PartIdentity; alts: 
           </div>
         ) : null}
 
-        {extra || d.replacements.length ? (
+        {extra || d.replacements.length || d.liveNotes.length ? (
           <div>
             <h4 className="text-sm font-semibold">拓展</h4>
-            {extra?.notes.length ? (
+            {d.liveNotes.length ? (
               <ul className="mt-2 grid gap-2 text-sm leading-relaxed">
-                {extra.notes.map((n) => (
+                {d.liveNotes.map((n) => (
                   <li key={n} className="border-l-2 border-line pl-3">
                     {n}
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="mt-2 text-sm text-muted">这颗料还没有本地补充说明，上面规格和立创替代可先用。</p>
+              <p className="mt-2 text-sm text-muted">这颗料还没有补充说明，上面规格和立创替代可先用。</p>
             )}
+            {intel?.hits.length ? (
+              <p className="mt-3 text-xs text-muted">
+                拓展来自立创参数和公开网页对照，报价仍以规格书和挂货为准。
+              </p>
+            ) : null}
             {d.replacements.length ? (
               <div className="mt-4">
                 <p className="text-xs text-muted">立创页上的相似 / 替代（不是保证脚位兼容）</p>
@@ -118,6 +131,22 @@ export function PartArchive({ identity, alts }: { identity: PartIdentity; alts: 
               {identity.longevity ? ` 寿命计划标到 ${identity.longevity}。` : ""}
             </p>
           </div>
+        ) : null}
+
+        {identity.lcscUrl || identity.stUrl ? (
+          <p className="text-xs text-muted">
+            {identity.lcscUrl ? (
+              <a href={identity.lcscUrl} target="_blank" rel="noreferrer" className="hover:underline">
+                立创商品页
+              </a>
+            ) : null}
+            {identity.lcscUrl && identity.stUrl ? " · " : null}
+            {identity.stUrl ? (
+              <a href={identity.stUrl} target="_blank" rel="noreferrer" className="hover:underline">
+                原厂页
+              </a>
+            ) : null}
+          </p>
         ) : null}
       </div>
     </section>

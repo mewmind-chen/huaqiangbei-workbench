@@ -5,7 +5,7 @@ import { PartArchive } from "@/components/workbench/part-archive";
 import { analyzePart, buildMarketCards, money, previousPartReport, stockText } from "@/lib/search/analyze";
 import type { CompanyCard, LcscAlt, ShopRow } from "@/lib/search/md-parse";
 import { summarizeCompanyInventory } from "@/lib/search/md-parse";
-import type { LiveOffer, PartIdentity, SourceStatus } from "@/lib/search/result-types";
+import type { IntelBrief, LiveOffer, PartIdentity, SourceStatus } from "@/lib/search/result-types";
 import type { QuoteLine } from "@/lib/types";
 import { useWorkbenchStore } from "@/lib/workbench-store";
 
@@ -29,6 +29,7 @@ export function LookupReport({
   shopRows,
   steps,
   yunPrice,
+  intel,
   inquirers,
   exactOnly,
   onExactOnly,
@@ -43,6 +44,7 @@ export function LookupReport({
   shopRows: ShopRow[];
   steps: SourceStatus[];
   yunPrice: number | null;
+  intel?: IntelBrief | null;
   inquirers: QuoteLine[];
   exactOnly: boolean;
   onExactOnly: (v: boolean) => void;
@@ -66,7 +68,32 @@ export function LookupReport({
 
   return (
     <div className="grid gap-5">
-      {identity ? <PartArchive identity={identity} alts={alts} /> : null}
+      {identity ? <PartArchive identity={identity} alts={alts} intel={intel} /> : null}
+
+      {kind === "company" && intel?.hits.length ? (
+        <section className="rounded-xl border border-line bg-surface p-4 lg:p-5">
+          <h3 className="text-sm font-semibold">公开介绍</h3>
+          <p className="mt-1 text-xs text-muted">AnySearch 公开页，只保留公司全名对得上的结果。不是库存。</p>
+          {intel.summary && !identity ? (
+            <p className="mt-3 text-sm leading-relaxed">{intel.summary}</p>
+          ) : null}
+          <ul className="mt-3 grid gap-2">
+            {intel.hits.slice(0, 8).map((h) => (
+              <li key={h.url || h.title} className="rounded-lg border border-line bg-surface-2 px-3 py-2">
+                {h.url ? (
+                  <a href={h.url} target="_blank" rel="noreferrer" className="text-sm font-medium hover:underline">
+                    {h.title || h.url}
+                    <ArrowUpRight className="ml-1 inline size-3.5" />
+                  </a>
+                ) : (
+                  <p className="text-sm font-medium">{h.title}</p>
+                )}
+                {h.snippet ? <p className="mt-1 text-xs leading-relaxed text-muted">{h.snippet}</p> : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {market.length ? (
         <section className="rounded-xl border border-line bg-surface p-4 lg:p-5">

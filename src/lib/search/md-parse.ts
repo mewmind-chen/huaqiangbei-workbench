@@ -241,10 +241,41 @@ export function parseGysCompanies(markdown: string, name: string): CompanyCard[]
         .filter(Boolean),
       memberYears: yearMatch ? yearMatch[1] : "",
       founded: foundMatch ? foundMatch[1] : "",
-      matched: companyName.includes(name) || name.includes(companyName.slice(2, 6)),
+      matched: sameCompany(name, companyName),
     });
   }
-  return records;
+  return records.filter((c) => c.matched);
+}
+
+function companyKey(name: string): string {
+  const n = String(name || "")
+    .replace(/[（(][^)）]*[)）]/g, "")
+    .replace(/^(深圳市?|东莞市?|广州市?|上海市?|北京市?|杭州市?|苏州市?|中山市?|宁波市?|成都市?)/, "")
+    .replace(/(股份有限公司|有限责任公司|有限公司|公司)$/, "")
+    .replace(/\s+/g, "")
+    .toLowerCase();
+  return n.length >= 2 ? n : String(name || "").trim().toLowerCase();
+}
+
+function companyCore(name: string): string {
+  let n = companyKey(name);
+  for (let i = 0; i < 4; i++) {
+    const next = n.replace(/(电子|科技|实业|贸易|商行|光电|微电子|半导体|器件|元件|技术|发展|集团|控股|国际|股份)+$/, "");
+    if (next === n || next.length < 2) break;
+    n = next;
+  }
+  return n;
+}
+
+function sameCompany(query: string, name: string): boolean {
+  const q = String(query || "").trim();
+  const n = String(name || "").trim();
+  if (!q || !n) return false;
+  if (q === n) return true;
+  if (companyKey(q) === companyKey(n)) return true;
+  const a = companyCore(q);
+  const b = companyCore(n);
+  return Boolean(a && b && a === b);
 }
 
 export function parseShopInventory(markdown: string): ShopRow[] {

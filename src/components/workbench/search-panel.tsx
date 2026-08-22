@@ -14,6 +14,7 @@ import { nowLocal } from "@/lib/dates";
 import { parseYunPrice } from "@/lib/search/analyze";
 import {
   lookupStep,
+  type IntelBrief,
   type LiveOffer,
   type PartIdentity,
   type SourceStatus,
@@ -34,37 +35,40 @@ const SEARCH_TABS: { id: SearchTab; label: string }[] = [
   { id: "customers", label: "客户" },
 ];
 
-const PART_STEPS: { key: "lcsc" | "st" | "hqew"; name: string }[] = [
+const PART_STEPS: { key: "lcsc" | "st" | "hqew" | "intel"; name: string }[] = [
   { key: "lcsc", name: "立创商品页" },
   { key: "st", name: "原厂应用" },
   { key: "hqew", name: "华强挂货" },
+  { key: "intel", name: "公开资料" },
 ];
 
-const COMPANY_STEPS: { key: "gys" | "shop"; name: string }[] = [
+const COMPANY_STEPS: { key: "gys" | "shop" | "intel"; name: string }[] = [
   { key: "gys", name: "华强供应商" },
   { key: "shop", name: "商铺库存" },
+  { key: "intel", name: "公开资料" },
 ];
 
 function mergeIdentity(a: PartIdentity | null, b?: PartIdentity): PartIdentity | null {
   if (!b) return a;
   if (!a) return b;
+  const apps = [...a.applications, ...b.applications].filter(Boolean);
   return {
-    mpn: b.mpn || a.mpn,
-    brand: b.brand || a.brand,
-    category: b.category || a.category,
-    package: b.package || a.package,
-    desc: b.desc || a.desc,
-    summary: b.summary || a.summary,
-    features: b.features || a.features,
-    lcscCode: b.lcscCode || a.lcscCode,
-    specs: b.specs?.length ? b.specs : a.specs || [],
-    applications: b.applications.length ? b.applications : a.applications,
-    longevity: b.longevity || a.longevity,
-    active: b.active || a.active,
-    lcscStock: b.lcscStock ?? a.lcscStock,
-    priceBreaks: b.priceBreaks.length ? b.priceBreaks : a.priceBreaks,
-    lcscUrl: b.lcscUrl || a.lcscUrl,
-    stUrl: b.stUrl || a.stUrl,
+    mpn: a.mpn || b.mpn,
+    brand: a.brand || b.brand,
+    category: a.category || b.category,
+    package: a.package || b.package,
+    desc: a.desc || b.desc,
+    summary: a.summary || b.summary,
+    features: a.features || b.features,
+    lcscCode: a.lcscCode || b.lcscCode,
+    specs: a.specs?.length ? a.specs : b.specs || [],
+    applications: [...new Set(apps)],
+    longevity: a.longevity || b.longevity,
+    active: a.active || b.active,
+    lcscStock: a.lcscStock ?? b.lcscStock,
+    priceBreaks: a.priceBreaks.length ? a.priceBreaks : b.priceBreaks,
+    lcscUrl: a.lcscUrl || b.lcscUrl,
+    stUrl: a.stUrl || b.stUrl,
   };
 }
 
@@ -82,6 +86,7 @@ function applyRecord(
     shopRows: (v: ShopRow[]) => void;
     steps: (v: SourceStatus[]) => void;
     yunPrice: (v: number | null) => void;
+    intel: (v: IntelBrief | null) => void;
   },
 ) {
   set.raw(record.query);
@@ -95,6 +100,7 @@ function applyRecord(
   set.shopRows(record.shopRows);
   set.steps(record.steps);
   set.yunPrice(record.yunPrice);
+  set.intel(record.intel || null);
 }
 
 function LookupView() {
@@ -123,6 +129,7 @@ function LookupView() {
   const [queryUsed, setQueryUsed] = useState("");
   const [yunPrice, setYunPrice] = useState<number | null>(null);
   const [scrapeKey, setScrapeKey] = useState("");
+  const [intel, setIntel] = useState<IntelBrief | null>(null);
 
   useEffect(() => {
     try {
@@ -154,12 +161,13 @@ function LookupView() {
     shopRows: setShopRows,
     steps: setSteps,
     yunPrice: setYunPrice,
+    intel: setIntel,
   };
 
   const detected = useMemo(() => detectQuery(raw), [raw]);
   const query = picked || (detected.candidates.length === 1 ? detected.candidates[0] : "");
   const inquirers = queryUsed ? inquirersFor(queryUsed) : [];
-  const hasReport = Boolean(queryUsed && (identity || offers.length || companies.length || shopRows.length));
+  const hasReport = Boolean(queryUsed && (identity || offers.length || companies.length || shopRows.length || intel));
 
   useEffect(() => {
     if (!pendingReport) return;
@@ -197,17 +205,23 @@ function LookupView() {
     setCompanies([]);
     setShopRows([]);
     setYunPrice(null);
+    setIntel(null);
     const plan = k === "company" ? COMPANY_STEPS : PART_STEPS;
     setSteps(plan.map((s) => ({ key: s.key, name: s.name, url: "", status: "searching", count: 0 })));
     try {
       if (k === "part") {
         const results = await Promise.all(
-          PART_STEPS.map((s) => lookupStep({ data: { query: q, step: s.key, scrapeKey: scrapeKey.trim() || undefined } })),
+          PART_STEPS.map((s) =>
+            lookupStep({
+              data: { query: q, step: s.key, kind: "part", scrapeKey: scrapeKey.trim() || undefined },
+            }),
+          ),
         );
         let ident: PartIdentity | null = null;
         const nextOffers: LiveOffer[] = [];
         const nextAlts: LcscAlt[] = [];
         let yun: number | null = null;
+        let nextIntel: IntelBrief | null = null;
         const nextSteps: SourceStatus[] = PART_STEPS.map((s, i) => {
           const r = results[i];
           if (!r.ok) {
@@ -216,6 +230,7 @@ function LookupView() {
           ident = mergeIdentity(ident, r.identity);
           if (r.alts?.length) nextAlts.push(...r.alts);
           if (r.offers?.length) nextOffers.push(...r.offers);
+          if (r.intel) nextIntel = r.intel;
           if (s.key === "hqew") yun = parseYunPrice(r.detail);
           return {
             key: s.key,
@@ -223,7 +238,7 @@ function LookupView() {
             url: r.url,
             status: r.status,
             error: r.detail,
-            count: r.offers?.length || r.alts?.length || (r.identity ? 1 : 0),
+            count: r.intel?.hits.length || r.offers?.length || r.alts?.length || (r.identity ? 1 : 0),
           };
         });
         setSteps(nextSteps);
@@ -231,6 +246,7 @@ function LookupView() {
         setAlts(nextAlts);
         setOffers(nextOffers);
         setYunPrice(yun);
+        setIntel(nextIntel);
         saveReport({
           id: crypto.randomUUID(),
           query: q,
@@ -243,26 +259,41 @@ function LookupView() {
           companies: [],
           shopRows: [],
           steps: nextSteps,
+          intel: nextIntel,
         });
         toast.success(`已记下 ${q} 的分析`);
       } else {
-        const gys = await lookupStep({ data: { query: q, step: "gys", scrapeKey: scrapeKey.trim() || undefined } });
+        const [gys, intelRes] = await Promise.all([
+          lookupStep({ data: { query: q, step: "gys", scrapeKey: scrapeKey.trim() || undefined } }),
+          lookupStep({ data: { query: q, step: "intel", kind: "company" } }),
+        ]);
         let shopUrl = "";
         let nextCompanies: CompanyCard[] = [];
+        let nextIntel: IntelBrief | null = intelRes.ok ? intelRes.intel || null : null;
         let gysStep: SourceStatus = { key: "gys", name: "华强供应商", url: "", status: "error", count: 0 };
+        let intelStep: SourceStatus = intelRes.ok
+          ? {
+              key: "intel",
+              name: "公开资料",
+              url: intelRes.url,
+              status: intelRes.status,
+              count: intelRes.intel?.hits.length || 0,
+              error: intelRes.detail,
+            }
+          : { key: "intel", name: "公开资料", url: "", status: "error", error: intelRes.error, count: 0 };
         if (gys.ok) {
           nextCompanies = gys.companies || [];
-          shopUrl =
-            nextCompanies.find((c) => c.matched && c.shopUrl)?.shopUrl ||
-            nextCompanies.find((c) => c.shopUrl)?.shopUrl ||
-            "";
+          shopUrl = nextCompanies.find((c) => c.matched && c.shopUrl)?.shopUrl || "";
           gysStep = { key: "gys", name: "华强供应商", url: gys.url, status: gys.status, count: nextCompanies.length };
           setCompanies(nextCompanies);
         } else {
           gysStep = { key: "gys", name: "华强供应商", url: "", status: "error", error: gys.error, count: 0 };
         }
-        setSteps((prev) => prev.map((s) => (s.key === "gys" ? gysStep : s)));
-        const shop = await lookupStep({ data: { query: q, step: "shop", shopUrl, scrapeKey: scrapeKey.trim() || undefined } });
+        setIntel(nextIntel);
+        setSteps([gysStep, { key: "shop", name: "商铺库存", url: "", status: "searching", count: 0 }, intelStep]);
+        const shop = await lookupStep({
+          data: { query: q, step: "shop", shopUrl, scrapeKey: scrapeKey.trim() || undefined },
+        });
         let nextShop: ShopRow[] = [];
         let nextOffers: LiveOffer[] = [];
         let shopStep: SourceStatus = { key: "shop", name: "商铺库存", url: "", status: "error", count: 0 };
@@ -282,7 +313,7 @@ function LookupView() {
         } else {
           shopStep = { key: "shop", name: "商铺库存", url: "", status: "error", error: shop.error, count: 0 };
         }
-        const nextSteps = [gysStep, shopStep];
+        const nextSteps = [gysStep, shopStep, intelStep];
         setSteps(nextSteps);
         saveReport({
           id: crypto.randomUUID(),
@@ -296,6 +327,7 @@ function LookupView() {
           companies: nextCompanies,
           shopRows: nextShop,
           steps: nextSteps,
+          intel: nextIntel,
         });
         toast.success(`已记下 ${q} 的分析`);
       }
@@ -459,6 +491,7 @@ function LookupView() {
             shopRows={shopRows}
             steps={steps}
             yunPrice={yunPrice}
+            intel={intel}
             inquirers={inquirers}
             exactOnly={exactOnly}
             onExactOnly={setExactOnly}

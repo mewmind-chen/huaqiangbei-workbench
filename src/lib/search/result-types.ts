@@ -28,6 +28,18 @@ export type SourceStatus = {
 
 export type PartSpec = { label: string; value: string };
 
+export type IntelHit = {
+  title: string;
+  url: string;
+  snippet: string;
+};
+
+export type IntelBrief = {
+  summary: string;
+  notes: string[];
+  hits: IntelHit[];
+};
+
 export type PartIdentity = {
   mpn: string;
   brand: string;
@@ -47,7 +59,7 @@ export type PartIdentity = {
   stUrl: string;
 };
 
-export type LookupStepKey = "lcsc" | "st" | "hqew" | "gys" | "shop";
+export type LookupStepKey = "lcsc" | "st" | "hqew" | "gys" | "shop" | "intel";
 
 export type LookupStepOk = {
   ok: true;
@@ -60,6 +72,7 @@ export type LookupStepOk = {
   offers?: LiveOffer[];
   companies?: CompanyCard[];
   shopRows?: ShopRow[];
+  intel?: IntelBrief;
 };
 
 export type LookupStepResult = LookupStepOk | { ok: false; step: LookupStepKey; error: string };
@@ -76,4 +89,5 @@ export type LookupRecord = {
   companies: CompanyCard[];
   shopRows: ShopRow[];
   steps: SourceStatus[];
+  intel?: IntelBrief | null;
 };

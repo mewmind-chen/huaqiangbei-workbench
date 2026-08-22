@@ -310,12 +310,31 @@ export async function runLookupStep(input: {
   query: string;
   step: LookupStepKey;
   shopUrl?: string;
+  kind?: "part" | "company";
   scrapeKey?: string;
 }): Promise<LookupStepResult> {
   const query = String(input.query || "").trim().slice(0, 80);
   const step = input.step;
   requestKey = String(input.scrapeKey || "").trim();
   if (!query) return { ok: false, step, error: "请输入型号或公司名" };
+  if (step === "intel") {
+    try {
+      const { fetchIntelBrief, identityPatchFromIntel } = await import("./anysearch.server");
+      const kind = input.kind === "company" ? "company" : "part";
+      const intel = await fetchIntelBrief(query, kind);
+      return {
+        ok: true,
+        step: "intel",
+        status: intel.hits.length ? "ok" : "empty",
+        url: intel.hits[0]?.url || "",
+        intel,
+        identity: kind === "part" ? identityPatchFromIntel(query, intel) : undefined,
+        detail: intel.summary,
+      };
+    } catch (err) {
+      return { ok: false, step, error: err instanceof Error ? err.message : "公开资料失败" };
+    }
+  }
   if (!getFirecrawlKey(requestKey)) return { ok: false, step, error: "查询服务暂不可用" };
   try {
     if (step === "lcsc") return await stepLcsc(query);
