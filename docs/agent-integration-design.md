@@ -117,8 +117,23 @@ transport / serverName / command / args / env / cwd / toolCallTimeoutMs / failOn
 ## 8. 里程碑
 
 - [x] M0 代码侦察 + migration 0004(已验证幂等)
-- [ ] M1 Workbench Agent API 路由(zod + 参数化 SQL)
-- [ ] M2 MCP 薄壳 harness-tools
-- [ ] M3 part-intelligence Skill
-- [ ] M4 端到端真实型号研究(dsh 会话内)
-- [ ] M5 两轮对抗审查通过
+- [x] M1 Workbench Agent API 路由(11 端点,zod + 参数化 SQL)
+- [x] M2 MCP 薄壳 harness-tools(12 工具,fail-fast 挂载)
+- [x] M3 part-intelligence Skill(verdict.score 引擎化约束)
+- [x] M4 端到端真实型号研究 × 3(NE555P rep-0791/rep-bed7/rep-20d2)
+- [x] M5 对抗审查 #1(blocker+6medium 全修)/#2(必改2项全修+攻击重放)
+
+## 9. 数据源与分析扩展(goal-114242c1, 2026-08-23)
+
+- [x] Findchips 数据源:findchips.server.ts 解析器(99 行样本→82 授权/
+      17 exact offers,变体零泄漏)+ lookup step + currency=USD 标注
+- [x] market.analyze 确定性评分引擎:热门(需求侧70%权重,内建
+      "供应商多≠热门")/缺货(库存50%+环比30%)/涨价(序列60%+溢价40%);
+      computedAt 取数据基准时间,同输入同输出;T1-T8 单测全过;
+      回归 v2 中模型 verdict.score=49 直接引用引擎涨价分(rep-20d2)
+- [x] snapshot-cron 定时静默采集(dry-run 默认,max≤50,steps 白名单)
+- [x] company_profiles 表(0006)+ company-intelligence Skill
+- [x] IC交易网登录会话 Tool 骨架(icnet step,auth_required 降级,
+      开源调研零现成实现,移动端为混淆加密 SPA)
+- [x] Mouser/DigiKey API 预留适配点(key 待申请)
+- 条件项待用户输入:IC交易网会员 cookie;Mouser/DigiKey API key
