@@ -7,6 +7,7 @@ import { LookupReport } from "@/components/workbench/lookup-report";
 import { PartsPool } from "@/components/workbench/parts-pool";
 import { QuoteBoard } from "@/components/workbench/quote-board";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { nowLocal } from "@/lib/dates";
@@ -121,6 +122,25 @@ function LookupView() {
   const [exactOnly, setExactOnly] = useState(true);
   const [queryUsed, setQueryUsed] = useState("");
   const [yunPrice, setYunPrice] = useState<number | null>(null);
+  const [scrapeKey, setScrapeKey] = useState("");
+
+  useEffect(() => {
+    try {
+      setScrapeKey(localStorage.getItem("workbench-scrape-key") || "");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  function persistScrapeKey(v: string) {
+    setScrapeKey(v);
+    try {
+      if (v.trim()) localStorage.setItem("workbench-scrape-key", v.trim());
+      else localStorage.removeItem("workbench-scrape-key");
+    } catch {
+      /* ignore */
+    }
+  }
 
   const setters = {
     raw: setRaw,
@@ -182,7 +202,7 @@ function LookupView() {
     try {
       if (k === "part") {
         const results = await Promise.all(
-          PART_STEPS.map((s) => lookupStep({ data: { query: q, step: s.key } })),
+          PART_STEPS.map((s) => lookupStep({ data: { query: q, step: s.key, scrapeKey: scrapeKey.trim() || undefined } })),
         );
         let ident: PartIdentity | null = null;
         const nextOffers: LiveOffer[] = [];
@@ -226,7 +246,7 @@ function LookupView() {
         });
         toast.success(`已记下 ${q} 的分析`);
       } else {
-        const gys = await lookupStep({ data: { query: q, step: "gys" } });
+        const gys = await lookupStep({ data: { query: q, step: "gys", scrapeKey: scrapeKey.trim() || undefined } });
         let shopUrl = "";
         let nextCompanies: CompanyCard[] = [];
         let gysStep: SourceStatus = { key: "gys", name: "华强供应商", url: "", status: "error", count: 0 };
@@ -242,7 +262,7 @@ function LookupView() {
           gysStep = { key: "gys", name: "华强供应商", url: "", status: "error", error: gys.error, count: 0 };
         }
         setSteps((prev) => prev.map((s) => (s.key === "gys" ? gysStep : s)));
-        const shop = await lookupStep({ data: { query: q, step: "shop", shopUrl } });
+        const shop = await lookupStep({ data: { query: q, step: "shop", shopUrl, scrapeKey: scrapeKey.trim() || undefined } });
         let nextShop: ShopRow[] = [];
         let nextOffers: LiveOffer[] = [];
         let shopStep: SourceStatus = { key: "shop", name: "商铺库存", url: "", status: "error", count: 0 };
@@ -360,7 +380,7 @@ function LookupView() {
       <div className="grid gap-5">
         <section className="rounded-xl border border-line bg-surface p-4 lg:p-5">
           <p className="text-xs text-muted">
-            一次只查一个。分析会留下记录，可回看立创阶梯、挂货结构和原厂应用。挂货是询价信息，不是成交库存。
+            一次只查一个。分析会留下记录。挂货是询价信息，不是成交库存。
           </p>
           <div className="mt-4 grid gap-3">
             <label className="grid gap-1.5">
@@ -373,6 +393,16 @@ function LookupView() {
                   setRaw(e.target.value);
                   setPicked(null);
                 }}
+              />
+            </label>
+            <label className="grid gap-1.5">
+              <Label>抓取 Key</Label>
+              <Input
+                type="password"
+                autoComplete="off"
+                placeholder="出现查询不可用时填写，只存在这台浏览器"
+                value={scrapeKey}
+                onChange={(e) => persistScrapeKey(e.target.value)}
               />
             </label>
             {detected.candidates.length > 1 ? (

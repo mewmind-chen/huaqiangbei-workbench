@@ -21,7 +21,7 @@ export function sourceLinks(query: string) {
 }
 
 export const lookupStep = createServerFn({ method: "POST" })
-  .validator((input: { query: string; step: LookupStepKey; shopUrl?: string }) => input)
+  .validator((input: { query: string; step: LookupStepKey; shopUrl?: string; scrapeKey?: string }) => input)
   .handler(async ({ data }): Promise<LookupStepResult> => {
     const { runLookupStep } = await import("./live-lookup.server");
     return runLookupStep(data);

@@ -20,17 +20,29 @@ import type {
   PartIdentity,
 } from "@/lib/search/result-types";
 
-function getFirecrawlKey(): string {
-  const fromEnv = String(process.env.FIRECRAWL_API_KEY || "").trim();
+function getFirecrawlKey(override?: string): string {
+  const fromArg = String(override || "").trim();
+  if (fromArg) return fromArg;
+  const fromEnv = String(process.env.FIRECRAWL_API_KEY || process.env.FC_API_KEY || "").trim();
   if (fromEnv) return fromEnv;
-  const paths = [
+  const files = [
+    "/workspace/fetcher-config.json",
     join(process.cwd(), "fetcher-config.json"),
+    "/workspace/.env",
+    join(process.cwd(), ".env"),
     join(process.cwd(), "artifacts/工作台研究/TodoApp-Mac版/fetcher-config.json"),
+    "/workspace/artifacts/工作台研究/TodoApp-Mac版/fetcher-config.json",
   ];
-  for (const p of paths) {
+  for (const p of files) {
     try {
-      const parsed = JSON.parse(readFileSync(p, "utf8")) as { apiKey?: string };
-      if (parsed.apiKey) return parsed.apiKey;
+      const raw = readFileSync(p, "utf8");
+      if (p.endsWith(".env")) {
+        const m = raw.match(/^(?:export\s+)?FIRECRAWL_API_KEY\s*=\s*["']?([^\r\n"']+)/m);
+        if (m?.[1]?.trim()) return m[1].trim();
+        continue;
+      }
+      const parsed = JSON.parse(raw) as { apiKey?: string };
+      if (parsed.apiKey) return String(parsed.apiKey).trim();
     } catch {
       /* next */
     }
@@ -38,8 +50,10 @@ function getFirecrawlKey(): string {
   return "";
 }
 
+let requestKey = "";
+
 async function scrapeMarkdown(url: string, waitFor = 2800): Promise<string> {
-  const key = getFirecrawlKey();
+  const key = getFirecrawlKey(requestKey);
   if (!key) throw new Error("未配置抓取服务");
   const res = await fetch("https://api.firecrawl.dev/v2/scrape", {
     method: "POST",
@@ -296,11 +310,13 @@ export async function runLookupStep(input: {
   query: string;
   step: LookupStepKey;
   shopUrl?: string;
+  scrapeKey?: string;
 }): Promise<LookupStepResult> {
   const query = String(input.query || "").trim().slice(0, 80);
   const step = input.step;
+  requestKey = String(input.scrapeKey || "").trim();
   if (!query) return { ok: false, step, error: "请输入型号或公司名" };
-  if (!getFirecrawlKey()) return { ok: false, step, error: "查询服务暂不可用" };
+  if (!getFirecrawlKey(requestKey)) return { ok: false, step, error: "查询服务暂不可用" };
   try {
     if (step === "lcsc") return await stepLcsc(query);
     if (step === "st") return await stepSt(query);
