@@ -16,7 +16,8 @@
     "check:auth": "node scripts/check-auth-invariant.mjs",
     "test": "node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/auth/gate-identity.test.ts",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "snapshot:cron": "node scripts/snapshot-cron.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
