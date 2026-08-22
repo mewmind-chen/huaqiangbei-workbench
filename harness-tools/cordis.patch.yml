@@ -1,0 +1,26 @@
+# 方案B: 把华强北 Workbench 业务 Tool 以 MCP stdio 形态挂进 DeepSeek Harness。
+# 用法(不污染全局配置):
+#   dsh web --patch /path/to/huaqiangbei-workbench/harness-tools/cordis.patch.yml
+#   dsh --profile headless "<task>" --patch .../cordis.patch.yml
+# 前提: Workbench dev server 已启动(npm run dev -> 127.0.0.1:8080)。
+# 依据: docs/config-catalog.md §@deepseek-ai/dsh-mcp-client (StdioConfig);
+#       patch 行格式见 docs/user/develop/basic/index.md (- insert:)。
+- insert:
+    - id: hqb-mcp
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        transport: stdio
+        serverName: hqb
+        command: node
+        args:
+          - '/Users/ylf/Documents/ChatGPT/工作台研究/huaqiangbei-workbench/harness-tools/server.mjs'
+        env:
+          WORKBENCH_URL: 'http://127.0.0.1:8080'
+        cwd: '/Users/ylf/Documents/ChatGPT/工作台研究/huaqiangbei-workbench/harness-tools'
+        toolCallTimeoutMs: 240000
+        # failOnStartupError=true: MCP 挂载失败时快速报错(而非静默无工具,
+        # 让模型幻觉调用不存在的 mcp__hqb__ 工具 —— 对抗审查 H)。
+        failOnStartupError: true
+        # 如需 API 鉴权, 在启动 dsh 前导出 AGENT_API_TOKEN(会经 scrubbed ambient
+        # env 透传给本 server), 并在 Workbench dev server 侧设置同值。
+        # 未设 token 时 API 仅接受 127.0.0.1 回环请求(对抗审查 C 的缓解)。
