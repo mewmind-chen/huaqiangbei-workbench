@@ -1,7 +1,7 @@
 import type { CompanyCard, LcscAlt, ShopRow } from "@/lib/search/md-parse";
 
 export type LiveOffer = {
-  sourceKey: "lcsc" | "hqew" | "shop";
+  sourceKey: "lcsc" | "hqew" | "shop" | "icnet";
   sourceName: string;
   supplier: string;
   model: string;
@@ -59,7 +59,7 @@ export type PartIdentity = {
   stUrl: string;
 };
 
-export type LookupStepKey = "lcsc" | "st" | "hqew" | "gys" | "shop" | "intel";
+export type LookupStepKey = "lcsc" | "st" | "hqew" | "gys" | "shop" | "intel" | "icnet";
 
 export type LookupStepOk = {
   ok: true;

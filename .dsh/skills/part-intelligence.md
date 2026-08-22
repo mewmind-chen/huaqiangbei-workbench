@@ -16,7 +16,7 @@ user-invocable: true
 | `part_research_full` | 立创+华强+公开线索三步连查,**自动落证据与快照** | 拿到型号后的主查询(约 15-40s) |
 | `internal_history_search` | 自己的历史询价/报价/报告 | 报价建议前必查 |
 | `part_dossier_get` | 型号池+近 5 次快照趋势+系列贸易知识 | 识别生命周期与替代关系 |
-| `part_lookup_step` | 单步补查(lcsc/st/hqew/gys/shop/intel) | 主查询某步为 empty/error 时换法重查 |
+| `part_lookup_step` | 单步补查(lcsc/st/hqew/gys/shop/intel/icnet) | 主查询某步为 empty/error 时换法重查;icnet 返回 auth_required 说明服务端未配置会员登录态,记录 degrade 后改用其他源,不要重试 |
 | `evidence_save` | 显式留证(含你用其他搜索工具拿到的网页) | 任何将支撑结论的事实 |
 | `event_append` | 过程事件(phase=degrade/error 必记) | 数据源受限、降级、异常 |
 | `report_save` | 最终报告入库(**硬校验证据引用**) | 结论形成后 |

@@ -127,10 +127,10 @@ server.tool(
 
 server.tool(
   "part_lookup_step",
-  "单步补查:agent 自主编排用。step ∈ lcsc/st/hqew/gys(供应商)/shop(商铺库存)/intel(公开线索)。只返回该步结构化结果,不自动落库;需要留证时再调 evidence_save。",
+  "单步补查:agent 自主编排用。step ∈ lcsc/st/hqew/gys(供应商)/shop(商铺库存)/intel(公开线索)/icnet(IC交易网, 需服务端已配置会员登录态; 未配置时返回 auth_required 结构化提示, 不要反复重试)。只返回该步结构化结果,不自动落库;需要留证时再调 evidence_save。",
   {
     query: z.string().min(1).max(80),
-    step: z.enum(["lcsc", "st", "hqew", "gys", "shop", "intel"]),
+    step: z.enum(["lcsc", "st", "hqew", "gys", "shop", "intel", "icnet"]),
     shopUrl: z.string().max(300).optional().describe("step=shop 时的商铺地址"),
     kind: z.enum(["part", "company"]).default("part"),
   },

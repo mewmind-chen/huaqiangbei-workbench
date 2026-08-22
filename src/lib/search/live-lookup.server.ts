@@ -341,6 +341,25 @@ export async function runLookupStep(input: {
     if (step === "st") return await stepSt(query);
     if (step === "hqew") return await stepHqew(query);
     if (step === "gys") return await stepGys(query);
+    if (step === "icnet") {
+      // IC交易网: 登录会话模式 —— 无 cookie 时结构化 auth_required(不硬闯登录墙)
+      const { getIcnetCookie, fetchIcnetOffers } = await import("./icnet.server");
+      const cookie = getIcnetCookie();
+      const r = await fetchIcnetOffers(query, cookie, scrapeMarkdown);
+      if (r.status === "ok") {
+        return {
+          ok: true,
+          step,
+          status: "ok",
+          url: `https://www.ic.net.cn/search/${encodeURIComponent(query)}.html`,
+          offers: r.offers,
+        };
+      }
+      if (r.status === "auth_required" || r.status === "empty") {
+        return { ok: true, step, status: r.status === "empty" ? "empty" : "skipped", url: "", detail: r.detail };
+      }
+      return { ok: false, step, error: r.detail };
+    }
     return await stepShop(String(input.shopUrl || ""));
   } catch (err) {
     return { ok: false, step, error: err instanceof Error ? err.message : "查询失败" };

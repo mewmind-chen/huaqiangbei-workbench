@@ -87,7 +87,7 @@ const EventAppendInput = z.object({
 
 const LookupStepInput = z.object({
   query: z.string().trim().min(1).max(80),
-  step: z.enum(["lcsc", "st", "hqew", "gys", "shop", "intel"]),
+  step: z.enum(["lcsc", "st", "hqew", "gys", "shop", "intel", "icnet"]),
   shopUrl: z.string().trim().max(300).optional(),
   kind: z.enum(["part", "company"]).default("part"),
 });
@@ -99,7 +99,7 @@ const LookupFullInput = z.object({
 });
 
 const EvidenceItemSchema = z.object({
-  sourceKey: z.enum(["lcsc", "hqew", "st", "intel", "internal", "shop", "gys"]),
+  sourceKey: z.enum(["lcsc", "hqew", "st", "intel", "internal", "shop", "gys", "icnet"]),
   url: z.string().trim().max(500).default(""),
   title: z.string().trim().max(200).default(""),
   capturedAt: z.string().trim().max(40).optional(),
