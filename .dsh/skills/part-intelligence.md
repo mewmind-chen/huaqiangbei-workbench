@@ -16,6 +16,7 @@ user-invocable: true
 | `part_research_full` | 立创+华强+公开线索三步连查,**自动落证据与快照** | 拿到型号后的主查询(约 15-40s) |
 | `internal_history_search` | 自己的历史询价/报价/报告 | 报价建议前必查 |
 | `part_dossier_get` | 型号池+近 5 次快照趋势+系列贸易知识 | 识别生命周期与替代关系 |
+| `market_analyze` | 程序化评分: 热门/缺货/涨价三指标分+信号明细+置信度 | **verdict.score 必须引用本工具输出**, 不允许自报分数 |
 | `part_lookup_step` | 单步补查(lcsc/st/hqew/gys/shop/intel/icnet) | 主查询某步为 empty/error 时换法重查;icnet 返回 auth_required 说明服务端未配置会员登录态,记录 degrade 后改用其他源,不要重试 |
 | `evidence_save` | 显式留证(含你用其他搜索工具拿到的网页) | 任何将支撑结论的事实 |
 | `event_append` | 过程事件(phase=degrade/error 必记) | 数据源受限、降级、异常 |
@@ -29,7 +30,7 @@ user-invocable: true
 3. `internal_history_search(mpn)` —— 我们自己询过谁、报过什么价。
 4. `part_dossier_get(mpn)` —— 快照趋势 + 同系列注意事项。
 5. 缺口补查:授权库存缺 → `part_lookup_step(step="lcsc")`;需求信号缺 → dsh 自带 web 搜索,**拿到线索必须 `evidence_save`**。
-6. 形成判断(见下规则)→ 组织报告。
+6. 调 `market_analyze(mpn)` 取程序化三指标分 → 结合下述规则解释分数(模型解释, 不改分数)→ 组织报告。
 7. `report_save`(verdict + report + evidenceIds)→ `task_finish(done)`。
 
 ## 判断规则(禁止跳过)

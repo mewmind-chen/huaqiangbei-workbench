@@ -127,10 +127,10 @@ server.tool(
 
 server.tool(
   "part_lookup_step",
-  "单步补查:agent 自主编排用。step ∈ lcsc/st/hqew/gys(供应商)/shop(商铺库存)/intel(公开线索)/icnet(IC交易网, 需服务端已配置会员登录态; 未配置时返回 auth_required 结构化提示, 不要反复重试)。只返回该步结构化结果,不自动落库;需要留证时再调 evidence_save。",
+  "单步补查:agent 自主编排用。step ∈ lcsc/st/hqew/gys(供应商)/shop(商铺库存)/intel(公开线索)/icnet(IC交易网, 需服务端会员登录态, 未配置返回 auth_required 不要重试)/findchips(海外授权分销聚合, 美元价)。只返回该步结构化结果,不自动落库;需要留证时再调 evidence_save。",
   {
     query: z.string().min(1).max(80),
-    step: z.enum(["lcsc", "st", "hqew", "gys", "shop", "intel", "icnet"]),
+    step: z.enum(["lcsc", "st", "hqew", "gys", "shop", "intel", "icnet", "findchips"]),
     shopUrl: z.string().max(300).optional().describe("step=shop 时的商铺地址"),
     kind: z.enum(["part", "company"]).default("part"),
   },
@@ -216,6 +216,16 @@ server.tool(
     evidenceIds: z.array(z.string()).max(200).default([]),
   },
   async (args) => call("report.save", { report: {}, ...args }),
+);
+
+server.tool(
+  "market_analyze",
+  "程序化市场评分引擎(确定性规则, 非模型自报): 输入型号, 返回 热门/缺货/涨价 三项指标分(0-100)+信号明细+置信度。verdict.score 必须引用本工具结果; offers 参数可传 part_research_full 返回的 offers 以启用现货溢价与多源覆盖信号。",
+  {
+    mpn: z.string().min(1).max(80),
+    offers: z.array(z.record(z.string(), z.unknown())).max(80).optional(),
+  },
+  async (args) => call("market.analyze", args),
 );
 
 server.tool(

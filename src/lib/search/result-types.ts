@@ -1,7 +1,7 @@
 import type { CompanyCard, LcscAlt, ShopRow } from "@/lib/search/md-parse";
 
 export type LiveOffer = {
-  sourceKey: "lcsc" | "hqew" | "shop" | "icnet";
+  sourceKey: "lcsc" | "hqew" | "shop" | "icnet" | "findchips";
   sourceName: string;
   supplier: string;
   model: string;
@@ -15,6 +15,8 @@ export type LiveOffer = {
   note: string;
   date: string;
   url: string;
+  /** 报价币种; 缺省视为 CNY, 海外源显式标注 USD(汇率换算由消费方负责) */
+  currency?: "CNY" | "USD";
 };
 
 export type SourceStatus = {
@@ -59,7 +61,7 @@ export type PartIdentity = {
   stUrl: string;
 };
 
-export type LookupStepKey = "lcsc" | "st" | "hqew" | "gys" | "shop" | "intel" | "icnet";
+export type LookupStepKey = "lcsc" | "st" | "hqew" | "gys" | "shop" | "intel" | "icnet" | "findchips";
 
 export type LookupStepOk = {
   ok: true;

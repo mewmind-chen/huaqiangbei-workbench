@@ -87,7 +87,7 @@ const EventAppendInput = z.object({
 
 const LookupStepInput = z.object({
   query: z.string().trim().min(1).max(80),
-  step: z.enum(["lcsc", "st", "hqew", "gys", "shop", "intel", "icnet"]),
+  step: z.enum(["lcsc", "st", "hqew", "gys", "shop", "intel", "icnet", "findchips"]),
   shopUrl: z.string().trim().max(300).optional(),
   kind: z.enum(["part", "company"]).default("part"),
 });
@@ -99,7 +99,7 @@ const LookupFullInput = z.object({
 });
 
 const EvidenceItemSchema = z.object({
-  sourceKey: z.enum(["lcsc", "hqew", "st", "intel", "internal", "shop", "gys", "icnet"]),
+  sourceKey: z.enum(["lcsc", "hqew", "st", "intel", "internal", "shop", "gys", "icnet", "findchips"]),
   url: z.string().trim().max(500).default(""),
   title: z.string().trim().max(200).default(""),
   capturedAt: z.string().trim().max(40).optional(),
@@ -213,6 +213,7 @@ function evidenceFromSteps(query: string, outcomes: StepOutcome[]) {
   const trustByStep: Record<string, "high" | "medium" | "low"> = {
     st: "high",
     lcsc: "high",
+    findchips: "high",
     hqew: "medium",
     gys: "medium",
     shop: "medium",
@@ -223,7 +224,7 @@ function evidenceFromSteps(query: string, outcomes: StepOutcome[]) {
     if (!o.ok) continue;
     if (o.step !== "intel" && !("identity" in o) && !("offers" in o) && !("companies" in o)) continue;
     items.push({
-      sourceKey: o.step === "intel" ? "intel" : (o.step as "lcsc" | "hqew" | "st" | "gys" | "shop"),
+      sourceKey: o.step === "intel" ? "intel" : (o.step as "lcsc" | "hqew" | "st" | "gys" | "shop" | "findchips"),
       url: o.url || "",
       title: `${query} @ ${o.step}`,
       capturedAt: nowIso(),
@@ -527,6 +528,37 @@ async function taskDetail(input: { taskId: string }) {
   };
 }
 
+/** market.analyze — 程序化评分引擎端点(§11, 根治 R5): 分数由确定性规则计算。 */
+async function marketAnalyze(input: { mpn: string; offers?: unknown[] }) {
+  const sql = await getSql();
+  const snapshots = await sql.query<{
+    captured_at: string; lcsc_stock: number | null; lcsc_min_price: number | null;
+    hqew_offer_count: number | null; hqew_supplier_count: number | null;
+  }>(
+    "select captured_at, lcsc_stock, lcsc_min_price, hqew_offer_count, hqew_supplier_count from market_snapshots where mpn = $1 order by captured_at asc limit 60",
+    [input.mpn],
+  );
+  const quotes = await sql.query<{ n: number }>(
+    "select count(*) as n from quote_lines where mpn = $1 and created_at >= $2",
+    [input.mpn, new Date(Date.now() - 90 * 86_400_000).toISOString()],
+  );
+  const analysis = await import("@/lib/search/market-analyze.server").then((m) =>
+    m.computeMarketAnalysis({
+      mpn: input.mpn,
+      snapshots: snapshots.map((s) => ({
+        capturedAt: s.captured_at,
+        lcscStock: s.lcsc_stock == null ? null : Number(s.lcsc_stock),
+        lcscMinPrice: s.lcsc_min_price == null ? null : Number(s.lcsc_min_price),
+        hqewOfferCount: s.hqew_offer_count == null ? null : Number(s.hqew_offer_count),
+        hqewSupplierCount: s.hqew_supplier_count == null ? null : Number(s.hqew_supplier_count),
+      })),
+      internalQuoteCount: Number(quotes[0]?.n ?? 0),
+      currentOffers: (input.offers ?? []) as unknown as import("@/lib/search/market-analyze.server").AnalyzeOffer[],
+    }),
+  );
+  return { ok: true as const, analysis };
+}
+
 async function saveReport(data: z.infer<typeof ReportSaveInput>) {
   const sql = await getSql();
   // 硬校验(M5, 审查#2必改1): 顶层 evidenceIds 与 verdict.claims[].evidenceId
@@ -613,6 +645,18 @@ route(
 route("evidence.save", EvidenceSaveInput, saveEvidence);
 route("snapshot.save", SnapshotSaveInput, saveSnapshot);
 route("report.save", ReportSaveInput, saveReport);
+route(
+  "market.analyze",
+  z.object({
+    mpn: z.string().trim().min(1).max(80),
+    offers: z
+      .array(z.record(z.string(), z.unknown()))
+      .max(80)
+      .optional()
+      .describe("可选: 当前 lookup 返回的 offers(用于现货溢价与多源覆盖)"),
+  }),
+  marketAnalyze,
+);
 route(
   "task.detail",
   z.object({ taskId: z.string().trim().min(1).max(64) }),

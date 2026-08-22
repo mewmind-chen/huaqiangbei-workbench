@@ -360,6 +360,22 @@ export async function runLookupStep(input: {
       }
       return { ok: false, step, error: r.detail };
     }
+    if (step === "findchips") {
+      // Findchips(海外授权分销聚合, 公开可抓): 美元价显式标注 currency=USD
+      const { fetchFindchipsOffers } = await import("./findchips.server");
+      const r = await fetchFindchipsOffers(query, scrapeMarkdown);
+      if (r.status === "ok" && !r.offers.length) {
+        return { ok: true, step, status: "empty", url: `https://www.findchips.com/search/${encodeURIComponent(query)}`, detail: "Findchips 无精确匹配或全部无货" };
+      }
+      if (r.status === "error") return { ok: false, step, error: r.detail };
+      return {
+        ok: true,
+        step,
+        status: "ok",
+        url: `https://www.findchips.com/search/${encodeURIComponent(query)}`,
+        offers: r.offers,
+      };
+    }
     return await stepShop(String(input.shopUrl || ""));
   } catch (err) {
     return { ok: false, step, error: err instanceof Error ? err.message : "查询失败" };
