@@ -221,7 +221,9 @@ export function computeMarketAnalysis(input: MarketAnalyzeInput): MarketAnalysis
     hqewOffersConfirmed == null ? null : hqewOffersConfirmed > 0;
   const fcRows = offers.filter((o) => o.sourceKey === "findchips");
   const findchipsExists: boolean | null =
-    offers.length && sourcesSeen.includes("findchips") ? fcRows.some((o) => (o.stock ?? 0) > 0) || fcRows.length > 0 : null;
+    sourcesSeen.includes("findchips") && offers.length
+      ? fcRows.some((o) => (o.stock ?? 0) > 0) // 有行才判定; 全部零库存行 → false(可达)
+      : null;
   const knownSources = [lcscExists, hqewExists, findchipsExists].filter((v) => v !== null);
   let crossVerdict: CrossCheck["verdict"] = "unknown";
   if (knownSources.length >= 2) {
@@ -240,6 +242,10 @@ export function computeMarketAnalysis(input: MarketAnalyzeInput): MarketAnalysis
   if (crossVerdict === "no") notes.push("⚠ 多源一致显示无货 —— 缺货判断获得跨源支撑");
   if (crossVerdict === "yes") notes.push("多源一致确认有货");
   if ((priceTrendBasisRef.basis ?? "").includes("溢价")) notes.push("现货价与授权价并列展示, 币种/口径不同请勿直接相减");
+  // 终验必改: partial 需区分"单一渠道确认"与"源间明确矛盾"
+  if (crossVerdict === "partial" && lcscExists === false && (hqewExists === true || findchipsExists === true)) {
+    notes.push("⚠ 源间分歧: 授权渠道显示无货, 但其他渠道确认在售 —— 缺货判断不可下结论");
+  }
 
   return {
     mpn,

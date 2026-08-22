@@ -41,6 +41,15 @@ function inRange(v, [lo, hi]) {
   return typeof v === "number" && v >= lo && v <= hi;
 }
 
+// 终验必改#5: 基准过期告警(>45 天) —— 过期后 FAIL 无法归因是回归还是市场漂移
+const AGE_DAYS = (Date.now() - new Date(conf.verifiedAt).getTime()) / 86_400_000;
+if (AGE_DAYS > 45) {
+  console.warn(
+    `⚠ 黄金样本基准已 ${Math.round(AGE_DAYS)} 天未人工复核(verifiedAt=${conf.verifiedAt})。` +
+      `FAIL 可能是市场波动而非回归缺陷 —— 请先人工核对基准值再下结论。`,
+  );
+}
+
 let failures = 0;
 for (const [mpn, samples] of byMpn) {
   if (only && mpn !== only) continue;

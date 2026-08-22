@@ -328,8 +328,14 @@ async function lookupFull(data: z.infer<typeof LookupFullInput>) {
     }
     const outcome = await runLookupStep({ query: data.query, step });
     // 数据准确性保险#1: 解析健康体检
-    if (outcome.ok && outcome.offers?.length) {
-      healthByStep.set(outcome.step, assessParseHealth(outcome.step, outcome.offers));
+    // 终验必改#1: status="empty"(解析跑了但 0 行)正是要防的安静失效形态 ——
+    // 必须进入体检(assessParseHealth 对空数组给出 unhealthy), 否则
+    // "没抓到行"会被 metricsFromOffers 记成 hqew_offer_count=0 的假确认。
+    if (outcome.ok) {
+      healthByStep.set(
+        outcome.step,
+        assessParseHealth(outcome.step, outcome.status === "empty" ? [] : (outcome.offers ?? [])),
+      );
     }
     outcomes.push(outcome);
   }
