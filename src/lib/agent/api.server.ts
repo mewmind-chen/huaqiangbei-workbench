@@ -95,7 +95,7 @@ const LookupStepInput = z.object({
 const LookupFullInput = z.object({
   taskId: z.string().trim().max(64).optional(),
   query: z.string().trim().min(1).max(80),
-  steps: z.array(z.enum(["lcsc", "st", "hqew", "intel", "findchips", "icnet"])).min(1).max(6).default(["lcsc", "hqew", "intel"]),
+  steps: z.array(z.enum(["lcsc", "st", "hqew", "intel", "findchips", "icnet"])).min(1).max(6).default(["lcsc", "hqew", "intel", "findchips", "icnet"]),
 });
 
 const EvidenceItemSchema = z.object({

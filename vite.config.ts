@@ -152,6 +152,9 @@ export default defineConfig(({ command, isPreview }) => ({
     host: "0.0.0.0",
     port: 8080,
     strictPort: true,
+    // 公网发布: Cloudflare Tunnel 子域名 hq.newmindchen.com 经隧道回源 8080,
+    // Vite 防 DNS-rebinding 默认拒公网 Host 头, 此处放行本域(radar 同款做法)
+    allowedHosts: [".newmindchen.com"],
   },
   preview: {
     host: "127.0.0.1",

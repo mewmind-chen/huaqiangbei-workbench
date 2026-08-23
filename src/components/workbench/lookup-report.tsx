@@ -372,7 +372,7 @@ export function LookupReport({
                     <td className="px-3 py-2 text-muted">{o.brand}</td>
                     <td className="px-3 py-2 text-muted">{o.batch || "—"}</td>
                     <td className="px-3 py-2 tabular-nums">{stockText(o.stock)}</td>
-                    <td className="px-3 py-2 tabular-nums">{money(o.price)}</td>
+                    <td className="px-3 py-2 tabular-nums">{o.currency === "USD" ? `$${o.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}` : money(o.price)}</td>
                     <td className="px-3 py-2">
                       <Button type="button" size="sm" variant="secondary" onClick={() => onSaveOffer(o)}>
                         记待办
@@ -397,7 +397,7 @@ export function LookupReport({
                   </Button>
                 </div>
                 <p className="mt-2 text-xs text-muted">
-                  {o.batch ? `${o.batch} · ` : ""}库存 {stockText(o.stock)} · {money(o.price)}
+                  {o.batch ? `${o.batch} · ` : ""}库存 {stockText(o.stock)} · {o.currency === "USD" ? `$${o.price?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}` : money(o.price)}{o.currency === "USD" ? " (USD)" : ""}
                 </p>
               </li>
             ))}
