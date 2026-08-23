@@ -377,7 +377,22 @@ function LookupView() {
                     : st === "ok"
                       ? `完成 ${row?.count || 0} 条`
                       : st === "skipped"
-                        ? row?.error || "跳过"
+                        ? (
+                          <span className="flex flex-wrap items-center gap-1">
+                            <span className="max-w-[170px] truncate">{row?.error || "跳过"}</span>
+                            {row?.url ? (
+                              <a
+                                href={row.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="shrink-0 font-medium text-accent hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                打开 ↗
+                              </a>
+                            ) : null}
+                          </span>
+                        )
                         : st === "error"
                           ? row?.error || "失败"
                           : st === "empty"
