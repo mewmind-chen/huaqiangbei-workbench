@@ -161,6 +161,7 @@ function identityFromLcsc(item: LcscItem): PartIdentity {
     priceBreaks: item.priceBreaks,
     lcscUrl: item.url,
     stUrl: "",
+    imageUrl: item.imageUrl || "",
   };
 }
 

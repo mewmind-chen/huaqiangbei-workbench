@@ -59,6 +59,8 @@ export type PartIdentity = {
   priceBreaks: { qty: number; price: number }[];
   lcscUrl: string;
   stUrl: string;
+  /** 立创商品图 URL（真实抓取；无则空串，前端不猜）。 */
+  imageUrl?: string;
 };
 
 export type LookupStepKey = "lcsc" | "st" | "hqew" | "gys" | "shop" | "intel" | "icnet" | "findchips";

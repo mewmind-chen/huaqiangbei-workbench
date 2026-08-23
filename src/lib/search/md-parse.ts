@@ -34,7 +34,31 @@ export type LcscItem = {
   priceBreaks: { qty: number; price: number }[];
   url: string;
   alts: LcscAlt[];
+  /** 立创商品图（真实抓取自商品页 markdown，非拼接猜测）。 */
+  imageUrl: string;
 };
+
+/**
+ * 从立创 markdown 提取商品图片 URL（真实抓取，不拼接猜测）。
+ * 实测立创商品图域为 alimg.szlcsc.com：`upload/public/product/source/`
+ * 为高清实物图，`breviary/` 为缩略图。firecrawl 转换后形态：
+ *   ![型号实物图](https://alimg.szlcsc.com/upload/public/product/source/….jpg)](...)   ← 链接包图
+ *   - ![型号商品缩略图](https://alimg.szlcsc.com/upload/public/product/breviary/….jpg)
+ * 优先高清 source，缺失则取首张缩略图；只认这两个真实域。
+ */
+export function extractLcscImage(markdown: string): string {
+  const md = String(markdown || "");
+  const sourceRe =
+    /!\[[^\]]*\]\(\s*(https?:\/\/alimg\.szlcsc\.com\/upload\/public\/product\/source\/[^)\s]+\.(?:jpe?g|png|webp))/g;
+  const breviaryRe =
+    /!\[[^\]]*\]\(\s*(https?:\/\/alimg\.szlcsc\.com\/upload\/public\/product\/breviary\/[^)\s]+\.(?:jpe?g|png|webp))/g;
+  const pick = (re: RegExp): string => {
+    re.lastIndex = 0;
+    const m = re.exec(md);
+    return m ? m[1].trim() : "";
+  };
+  return pick(sourceRe) || pick(breviaryRe) || "";
+}
 
 export type CompanyCard = {
   name: string;
@@ -212,6 +236,7 @@ export function parseLcscSearchListing(markdown: string, mpn: string): LcscItem 
     priceBreaks,
     url,
     alts: [],
+    imageUrl: extractLcscImage(block),
   };
 }
 
@@ -396,6 +421,7 @@ export function parseLcscItem(markdown: string, mpn: string, url: string): LcscI
     priceBreaks,
     url,
     alts,
+    imageUrl: extractLcscImage(md) || listing?.imageUrl || "",
   };
 }
 
