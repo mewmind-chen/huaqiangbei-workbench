@@ -345,7 +345,7 @@ export async function runLookupStep(input: {
       // IC交易网: 登录会话模式 —— 无 cookie 时结构化 auth_required(不硬闯登录墙)
       const { getIcnetCookie, fetchIcnetOffers } = await import("./icnet.server");
       const cookie = getIcnetCookie();
-      const r = await fetchIcnetOffers(query, cookie, scrapeMarkdown);
+      const r = await fetchIcnetOffers(query, cookie);
       if (r.status === "ok") {
         return {
           ok: true,
