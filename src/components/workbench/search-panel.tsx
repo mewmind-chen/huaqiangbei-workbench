@@ -35,11 +35,13 @@ const SEARCH_TABS: { id: SearchTab; label: string }[] = [
   { id: "customers", label: "客户" },
 ];
 
-const PART_STEPS: { key: "lcsc" | "st" | "hqew" | "intel"; name: string }[] = [
+const PART_STEPS: { key: "lcsc" | "st" | "hqew" | "intel" | "findchips" | "icnet"; name: string }[] = [
   { key: "lcsc", name: "立创商品页" },
   { key: "st", name: "原厂应用" },
   { key: "hqew", name: "华强挂货" },
   { key: "intel", name: "公开资料" },
+  { key: "findchips", name: "海外分销" },
+  { key: "icnet", name: "IC交易网" },
 ];
 
 const COMPANY_STEPS: { key: "gys" | "shop" | "intel"; name: string }[] = [

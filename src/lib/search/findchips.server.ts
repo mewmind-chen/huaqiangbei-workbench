@@ -163,7 +163,7 @@ export async function fetchFindchipsOffers(
   const url = `https://www.findchips.com/search/${encodeURIComponent(mpn)}`;
   let md = "";
   try {
-    md = await scrapeMarkdown(url, 4000);
+    md = await scrapeMarkdown(url, 3000);
   } catch (err) {
     return { status: "error", detail: err instanceof Error ? err.message : "findchips fetch failed" };
   }

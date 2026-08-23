@@ -203,7 +203,7 @@ export async function fetchIcnetOffers(
     const page = await ctx.newPage();
     // ① 首页过环境挑战
     await page.goto("https://www.ic.net.cn/", { waitUntil: "domcontentloaded", timeout: 45_000 });
-    await page.waitForTimeout(2500);
+    await page.waitForTimeout(1500); // 压缩首页等待(加速)
     // ② 导航到搜索结果页
     const target = `https://www.ic.net.cn/search/${encodeURIComponent(mpn)}.html`;
     await page
@@ -212,8 +212,8 @@ export async function fetchIcnetOffers(
     // ③ 轮询等待列表渲染
     let html = "";
     let hits = 0;
-    for (let i = 0; i < 8; i += 1) {
-      await page.waitForTimeout(2500);
+    for (let i = 0; i < 4; i += 1) {
+      await page.waitForTimeout(2000); // 压缩轮询窗口(加速)
       html = await page.content().catch(() => "");
       hits = (html.match(new RegExp(mpn.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi")) || []).length;
       if (hits > 5) break;
