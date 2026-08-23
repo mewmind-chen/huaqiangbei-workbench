@@ -356,7 +356,15 @@ export async function runLookupStep(input: {
         };
       }
       if (r.status === "auth_required" || r.status === "empty") {
-        return { ok: true, step, status: r.status === "empty" ? "empty" : "skipped", url: "", detail: r.detail };
+        // C 方案: 受限/空结果也带上直达搜索链接, 前端步骤栏渲染为可点开的
+        // "浏览器打开"入口(平台风控只拦自动化, 手动访问不受影响)。
+        return {
+          ok: true,
+          step,
+          status: r.status === "empty" ? "empty" : "skipped",
+          url: r.url ?? `https://www.ic.net.cn/search/${encodeURIComponent(query)}.html`,
+          detail: r.detail,
+        };
       }
       return { ok: false, step, error: r.detail };
     }
