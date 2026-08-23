@@ -9,7 +9,10 @@ import { cn } from "@/lib/utils";
 import { useWorkbenchStore } from "@/lib/workbench-store";
 
 export function Workbench() {
-  const [clock, setClock] = useState(() => formatHeaderClock());
+  // Hydration 修复: useState(() => formatHeaderClock()) 会使 SSR 与客户端各取一次
+  // new Date(), 跨分钟即 mismatch → React 放弃接管整树 → 按钮全失灵。
+  // 正确姿势: SSR/首帧渲染空, mount 后再设时钟(todo-panel 同款模式)。
+  const [clock, setClock] = useState("");
   const hydrated = useTodoStore((s) => s.hydrated);
   const items = useTodoStore((s) => s.items);
   const tab = useWorkbenchStore((s) => s.mainTab);
@@ -44,6 +47,7 @@ export function Workbench() {
 
   useEffect(() => {
     const t = window.setInterval(() => setClock(formatHeaderClock()), 30_000);
+    setClock(formatHeaderClock());
     return () => window.clearInterval(t);
   }, []);
 
