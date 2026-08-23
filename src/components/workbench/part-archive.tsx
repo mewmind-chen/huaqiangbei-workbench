@@ -17,18 +17,41 @@ export function PartArchive({
 
   return (
     <section className="rounded-xl border border-line bg-surface p-4 lg:p-5">
-      <p className="text-xs text-muted">型号档案</p>
-      <h3 className="mt-1 text-xl font-semibold tracking-tight">{identity.mpn}</h3>
-      <p className="mt-1 text-sm text-muted">
-        {[identity.brand, identity.category, identity.package, identity.lcscCode && `立创 ${identity.lcscCode}`]
-          .filter(Boolean)
-          .join(" · ")}
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {identity.active ? <Badge variant="done">在产</Badge> : null}
-        {identity.longevity ? <Badge variant="progress">寿命标到 {identity.longevity}</Badge> : null}
-        {extra?.family ? <Badge variant="outline">{extra.family}</Badge> : null}
-        {identity.package ? <Badge variant="outline">{identity.package}</Badge> : null}
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs text-muted">型号档案</p>
+          <h3 className="mt-1 text-xl font-semibold tracking-tight">{identity.mpn}</h3>
+          <p className="mt-1 text-sm text-muted">
+            {[identity.brand, identity.category, identity.package, identity.lcscCode && `立创 ${identity.lcscCode}`]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {identity.active ? <Badge variant="done">在产</Badge> : null}
+            {identity.longevity ? <Badge variant="progress">寿命标到 {identity.longevity}</Badge> : null}
+            {extra?.family ? <Badge variant="outline">{extra.family}</Badge> : null}
+            {identity.package ? <Badge variant="outline">{identity.package}</Badge> : null}
+          </div>
+        </div>
+        {identity.imageUrl ? (
+          <a
+            href={identity.lcscUrl || undefined}
+            target="_blank"
+            rel="noreferrer"
+            className="shrink-0"
+            title="立创商品图（点击打开商品页）"
+          >
+            <img
+              src={identity.imageUrl}
+              alt={`${identity.mpn} 封装图`}
+              loading="lazy"
+              className="h-24 w-24 rounded-lg border border-line bg-white object-contain"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
+            />
+          </a>
+        ) : null}
       </div>
 
       <div className="mt-6 grid gap-6">
