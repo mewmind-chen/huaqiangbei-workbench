@@ -417,7 +417,7 @@ export function parseLcscItem(markdown: string, mpn: string, url: string): LcscI
     features,
     lcscCode,
     specs,
-    stock: listing?.stock ?? parseNum(stockMatch?.[1] || null),
+    stock: parseNum(stockMatch?.[1] || null) ?? listing?.stock ?? null,
     priceBreaks,
     url,
     alts,
