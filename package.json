@@ -18,7 +18,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "snapshot:cron": "node scripts/snapshot-cron.mjs",
-    "check:golden": "node scripts/golden-check.mjs"
+    "check:golden": "node scripts/golden-check.mjs",
+    "icnet:setup": "node scripts/icnet-setup.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
