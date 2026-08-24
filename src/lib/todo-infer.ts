@@ -1,4 +1,4 @@
-import { ITEM_TYPES, type ItemType, type RecognizeDraft } from "@/lib/types";
+import { ITEM_TYPES, type ItemType, type RecognizeDraft } from "./types.ts";
 
 const TYPE_RULES: [RegExp, ItemType][] = [
   [/报价|请报价|可以报|报一下|报个价|询价|价格|多少钱|成本|单价|BOM|型号|怎么卖|怎么算|核算/, "报价"],

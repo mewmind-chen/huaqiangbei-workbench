@@ -1,0 +1,71 @@
+{
+  "providerAudit": {
+    "DEEPSEEK_API_KEY": true,
+    "OPENAI_API_KEY": false,
+    "GEMINI_API_KEY": false,
+    "GOOGLE_API_KEY": false,
+    "ANTHROPIC_API_KEY": false,
+    "OPENROUTER_API_KEY": true,
+    "OPENCODE_GO_API_KEY": true,
+    "IKUN_API_KEY": true,
+    "NVIDIA_API_KEY": true,
+    "GROQ_API_KEY": true,
+    "LLM_API_KEY": true,
+    "ZHIPU_API_KEY": false,
+    "BRAVE_API_KEY": true,
+    "XAI_API_KEY": false
+  },
+  "capabilityTests": [
+    {
+      "provider": "DeepSeek",
+      "model": "deepseek-v4-flash-vision-exp",
+      "configured": true,
+      "httpStatus": 200,
+      "imageInput": "data:image/png;base64",
+      "jsonResponse": true,
+      "latencyMsApprox": 1432,
+      "selected": true
+    },
+    {
+      "provider": "Zhipu describe-image",
+      "model": "glm-4v-flash",
+      "configured": true,
+      "httpStatus": 200,
+      "imageInput": "data:image/png;base64",
+      "jsonResponse": true,
+      "latencyMsApprox": 1297,
+      "selected": false,
+      "reason": "DeepSeek is the previously verified project Vision path and is directly callable with a current credential."
+    },
+    {
+      "provider": "OpenRouter",
+      "configured": true,
+      "modelDiscoveryHttpStatus": 200,
+      "testedModels": [
+        "meta/muse-spark-1.2-contributor",
+        "deepseek/deepseek-v4-flash-vision-exp"
+      ],
+      "result": "no_endpoint_available_under_current_guardrails"
+    }
+  ],
+  "fixtures": {
+    "case1": { "status": "pass", "type": "报价", "exactMpn": "TPS54560DDAR", "amount": null, "dueAt": null },
+    "case2": { "status": "pass", "type": "发货", "amount": null, "dueAt": null },
+    "case3": { "status": "pass", "type": "发票", "amount": null, "dueAt": null },
+    "case4": { "status": "pass", "items": 2, "merged": false },
+    "case5": { "status": "pass", "customer": "客户", "amount": null, "dueAt": null, "invented": false }
+  },
+  "ui": {
+    "clipboardPaste": { "status": "pass", "items": 1, "pendingBeforeConfirm": true, "autoSaved": false },
+    "upload": { "status": "blocked_by_chrome_extension", "error": "Not allowed" }
+  },
+  "production": {
+    "homepageHttpStatusBeforeDeploy": 200,
+    "beforeDeployClipboard": { "status": "failed", "uiMessage": "识别服务暂不可用", "reason": "production still runs the pre-PR Todo xAI build" },
+    "todoRecognitionAfterDeploy": "not_verified",
+    "reason": "No Vercel CLI/project deployment credentials are available in this workspace; PR/preview deployment is required before live verification."
+  },
+  "platformChanges": 0,
+  "newApiContracts": 0,
+  "tests": { "npmTest": "pass: 160 + 44", "typecheck": "pass", "build": "pass" }
+}
