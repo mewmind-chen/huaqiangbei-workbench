@@ -56,7 +56,7 @@ export const researchViaPlatform = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<PlatformLookup | null> => {
     const ctx = { firecrawlKey: data.scrapeKey };
     if (data.kind === "part") {
-      const body = await post("/v1/parts/research", { mpn: data.query, steps: ["lcsc", "st", "hqew", "intel", "findchips", "icnet"], ...ctx });
+      const body = await post("/v1/parts/research", { mpn: data.query, steps: ["lcsc", "st", "hqew", "intel", "findchips", "icnet"], mode: "auto", ...ctx });
       if (!body || body.ok === false) return null;
       const steps = Array.isArray(body.steps) ? (body.steps as LookupStepResult[]) : [];
       const names: Record<string, string> = {
@@ -85,7 +85,7 @@ export const researchViaPlatform = createServerFn({ method: "POST" })
         ),
       };
     }
-    const body = await post("/v1/companies/research", { company: data.query, steps: ["gys", "shop", "intel"], ...ctx });
+    const body = await post("/v1/companies/research", { company: data.query, steps: ["gys", "shop", "intel"], mode: "auto", ...ctx });
     if (!body || body.ok === false) return null;
     return {
       kind: "company",

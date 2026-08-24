@@ -15,6 +15,8 @@ test("platform client posts to /v1/parts and /v1/companies, not Workbench SQL", 
   const src = readFileSync(join(root, "src/lib/search/agent-platform.ts"), "utf8");
   assert.match(src, /\/v1\/parts\/research/);
   assert.match(src, /\/v1\/companies\/research/);
+  assert.match(src, /mode: "auto"/);
+  assert.doesNotMatch(src, /mode: "agent"/);
   assert.doesNotMatch(src, /insert into/);
   assert.doesNotMatch(src, /getSql/);
 });
