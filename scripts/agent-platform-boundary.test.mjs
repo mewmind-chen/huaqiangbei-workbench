@@ -11,6 +11,14 @@ test("Workbench research UI tries Agent API before local lookup", () => {
   assert.match(panel, /lookupStep/);
 });
 
+test("report review queries render inside a stable QueryClientProvider", () => {
+  const rootRoute = readFileSync(join(root, "src/routes/__root.tsx"), "utf8");
+  const report = readFileSync(join(root, "src/components/workbench/lookup-report.tsx"), "utf8");
+  assert.match(report, /useQueryClient\(\)/);
+  assert.match(rootRoute, /new QueryClient\(\)/);
+  assert.match(rootRoute, /<QueryClientProvider client=\{queryClient\}>[\s\S]*<AuthProvider>[\s\S]*<Outlet \/>/);
+});
+
 test("platform client injects local context into parts research without SQL or Harness types", () => {
   const src = readFileSync(join(root, "src/lib/search/agent-platform.ts"), "utf8");
   assert.match(src, /\/v1\/parts\/research/);

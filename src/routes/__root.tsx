@@ -1,10 +1,39 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "工作台";
+
+function RootComponent() {
+  const [queryClient] = useState(() => new QueryClient());
+
+  return (
+    <html lang="zh-CN" className="antialiased" suppressHydrationWarning>
+      <head>
+        <HeadContent />
+      </head>
+      <body className="min-h-dvh bg-bg font-sans text-ink">
+        <PreviewHostBridge />
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <Outlet />
+          </AuthProvider>
+          <Toaster
+            position="top-center"
+            toastOptions={{
+              className: "font-sans text-sm",
+            }}
+          />
+        </QueryClientProvider>
+        <Scripts />
+      </body>
+    </html>
+  );
+}
 
 export const Route = createRootRoute({
   head: () => ({
@@ -29,24 +58,5 @@ export const Route = createRootRoute({
       },
     ],
   }),
-  component: () => (
-    <html lang="zh-CN" className="antialiased" suppressHydrationWarning>
-      <head>
-        <HeadContent />
-      </head>
-      <body className="min-h-dvh bg-bg font-sans text-ink">
-        <PreviewHostBridge />
-        <AuthProvider>
-          <Outlet />
-        </AuthProvider>
-        <Toaster
-          position="top-center"
-          toastOptions={{
-            className: "font-sans text-sm",
-          }}
-        />
-        <Scripts />
-      </body>
-    </html>
-  ),
+  component: RootComponent,
 });
