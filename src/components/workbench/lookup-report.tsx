@@ -5,7 +5,14 @@ import { PartArchive } from "@/components/workbench/part-archive";
 import { analyzePart, buildMarketCards, money, previousPartReport, stockText } from "@/lib/search/analyze";
 import type { CompanyCard, LcscAlt, ShopRow } from "@/lib/search/md-parse";
 import { summarizeCompanyInventory } from "@/lib/search/md-parse";
-import type { IntelBrief, LiveOffer, PartIdentity, SourceStatus } from "@/lib/search/result-types";
+import type {
+  IntelBrief,
+  LiveOffer,
+  PartIdentity,
+  PlatformAdvice,
+  PlatformRecommendation,
+  SourceStatus,
+} from "@/lib/search/result-types";
 import type { QuoteLine } from "@/lib/types";
 import { useWorkbenchStore } from "@/lib/workbench-store";
 
@@ -30,6 +37,8 @@ export function LookupReport({
   steps,
   yunPrice,
   intel,
+  advice,
+  recommendation,
   inquirers,
   exactOnly,
   onExactOnly,
@@ -45,6 +54,8 @@ export function LookupReport({
   steps: SourceStatus[];
   yunPrice: number | null;
   intel?: IntelBrief | null;
+  advice?: PlatformAdvice | null;
+  recommendation?: PlatformRecommendation | null;
   inquirers: QuoteLine[];
   exactOnly: boolean;
   onExactOnly: (v: boolean) => void;
@@ -92,6 +103,18 @@ export function LookupReport({
               </li>
             ))}
           </ul>
+        </section>
+      ) : null}
+
+      {kind === "part" && advice?.usedInternal ? (
+        <section className="rounded-xl border border-line bg-surface p-4 lg:p-5">
+          <h3 className="text-sm font-semibold">内部业务建议</h3>
+          <p className="mt-1 text-xs text-muted">基于本工作台的汇总询价上下文，不是公开市场证据或成交结论。</p>
+          <div className="mt-4 rounded-lg border border-line bg-surface-2 px-3 py-3">
+            <p className="text-sm font-semibold">{advice.action || recommendation?.action || "人工确认后报价"}</p>
+            {advice.internalView ? <p className="mt-2 text-xs leading-relaxed text-muted">{advice.internalView}</p> : null}
+            {advice.combined ? <p className="mt-2 text-xs leading-relaxed text-muted">{advice.combined}</p> : null}
+          </div>
         </section>
       ) : null}
 

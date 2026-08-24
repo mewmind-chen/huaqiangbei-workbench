@@ -42,6 +42,19 @@ export type IntelBrief = {
   hits: IntelHit[];
 };
 
+/** Internal business suggestion from Agent Platform; never public evidence. */
+export type PlatformAdvice = {
+  action: string;
+  internalView: string;
+  combined: string;
+  usedInternal: boolean;
+};
+
+export type PlatformRecommendation = {
+  action?: string;
+  reasoning?: string;
+};
+
 export type PartIdentity = {
   mpn: string;
   brand: string;
@@ -94,4 +107,6 @@ export type LookupRecord = {
   shopRows: ShopRow[];
   steps: SourceStatus[];
   intel?: IntelBrief | null;
+  advice?: PlatformAdvice | null;
+  recommendation?: PlatformRecommendation | null;
 };

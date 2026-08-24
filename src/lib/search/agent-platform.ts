@@ -4,7 +4,15 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import type { CompanyCard, LcscAlt, ShopRow } from "@/lib/search/md-parse";
-import type { IntelBrief, LiveOffer, LookupStepResult, PartIdentity, SourceStatus } from "@/lib/search/result-types";
+import type {
+  IntelBrief,
+  LiveOffer,
+  LookupStepResult,
+  PartIdentity,
+  PlatformAdvice,
+  PlatformRecommendation,
+  SourceStatus,
+} from "@/lib/search/result-types";
 
 export const AGENT_API_URL = (process.env.AGENT_API_URL || "http://127.0.0.1:8787").replace(/\/+$/, "");
 
@@ -18,6 +26,8 @@ export type PlatformLookup = {
   intel: IntelBrief | null;
   steps: SourceStatus[];
   yunPrice: number | null;
+  advice: PlatformAdvice | null;
+  recommendation: PlatformRecommendation | null;
 };
 
 function stepStatus(r: LookupStepResult | undefined, key: string, name: string): SourceStatus {
@@ -56,7 +66,17 @@ export const researchViaPlatform = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<PlatformLookup | null> => {
     const ctx = { firecrawlKey: data.scrapeKey };
     if (data.kind === "part") {
-      const body = await post("/v1/parts/research", { mpn: data.query, steps: ["lcsc", "st", "hqew", "intel", "findchips", "icnet"], mode: "auto", ...ctx });
+      // The provider is server-only and reads Workbench data before this HTTP
+      // boundary. The browser client never imports SQL or Harness code.
+      const { getWorkbenchQuotationContext } = await import("./workbench-context-provider.server");
+      const quotation = await getWorkbenchQuotationContext(data.query);
+      const body = await post("/v1/parts/research", {
+        mpn: data.query,
+        steps: ["lcsc", "st", "hqew", "intel", "findchips", "icnet"],
+        mode: "auto",
+        context: { quotation },
+        ...ctx,
+      });
       if (!body || body.ok === false) return null;
       const steps = Array.isArray(body.steps) ? (body.steps as LookupStepResult[]) : [];
       const names: Record<string, string> = {
@@ -76,6 +96,8 @@ export const researchViaPlatform = createServerFn({ method: "POST" })
         shopRows: [],
         intel: null,
         yunPrice: null,
+        advice: (body.advice as PlatformAdvice) || null,
+        recommendation: (body.recommendation as PlatformRecommendation) || null,
         steps: ["lcsc", "st", "hqew", "intel", "findchips", "icnet"].map((key) =>
           stepStatus(
             steps.find((s) => s.ok && s.step === key) || steps.find((s) => !s.ok && s.step === key),
@@ -96,6 +118,8 @@ export const researchViaPlatform = createServerFn({ method: "POST" })
       shopRows: (body.shopRows as ShopRow[]) || [],
       intel: null,
       yunPrice: null,
+      advice: null,
+      recommendation: (body.recommendation as PlatformRecommendation) || null,
       steps: [
         { key: "gys", name: "华强供应商", url: "", status: (body.companies as unknown[])?.length ? "ok" : "empty", count: (body.companies as unknown[])?.length || 0 },
         { key: "shop", name: "商铺库存", url: "", status: (body.shopRows as unknown[])?.length ? "ok" : "empty", count: (body.shopRows as unknown[])?.length || 0 },
