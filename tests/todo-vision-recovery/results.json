@@ -64,7 +64,7 @@
     "beforeDeployClipboard": { "status": "failed", "uiMessage": "识别服务暂不可用", "reason": "production still runs the pre-PR Todo xAI build" },
     "homepageHttpStatusAfterDeploy": 200,
     "todoRecognitionAfterDeploy": { "status": "pass", "model": "deepseek-v4-flash-vision-exp", "clipboard": "pass", "upload": "pass_in_app_browser", "pendingBeforeConfirm": true, "humanConfirmSave": "pass", "exactMpn": "TPS54560DDAR" },
-    "runtime": { "entry": "Cloudflare Tunnel hq.newmindchen.com -> 127.0.0.1:8091", "credentialSource": "existing Runtime credential store", "radarTouched": false }
+    "runtime": { "entry": "Cloudflare Tunnel hq.newmindchen.com -> 127.0.0.1:8091", "credentialSource": "existing Runtime credential store", "ingressPortChanged": "8081 -> 8091", "radarTouched": false }
   },
   "platformChanges": 0,
   "newApiContracts": 0,
