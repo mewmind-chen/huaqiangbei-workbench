@@ -161,6 +161,11 @@ export default defineConfig(({ command, isPreview }) => ({
     port: 8081,
     strictPort: true,
   },
+  // ICNet loads Playwright only inside a server endpoint. Keep its optional
+  // native watchers out of Rolldown's browser dependency optimizer; otherwise
+  // Vite 8 tries to parse fsevents.node as JavaScript during dev startup.
+  optimizeDeps: { exclude: ["playwright"] },
+  ssr: { external: ["playwright"] },
   resolve: { tsconfigPaths: true },
   plugins: [
     pgliteBootstrapPlugin(),
