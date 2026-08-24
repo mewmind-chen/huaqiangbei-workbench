@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { nowLocal } from "@/lib/dates";
 import { parseYunPrice } from "@/lib/search/analyze";
+import { researchViaPlatform } from "@/lib/search/agent-platform";
 import {
   lookupStep,
   type IntelBrief,
@@ -211,6 +212,35 @@ function LookupView() {
     const plan = k === "company" ? COMPANY_STEPS : PART_STEPS;
     setSteps(plan.map((s) => ({ key: s.key, name: s.name, url: "", status: "searching", count: 0 })));
     try {
+      const platform = await researchViaPlatform({
+        data: { query: q, kind: k, scrapeKey: scrapeKey.trim() || undefined },
+      });
+      if (platform && (platform.identity || platform.offers.length || platform.companies.length || platform.shopRows.length)) {
+        setSteps(platform.steps);
+        setIdentity(platform.identity);
+        setAlts(platform.alts);
+        setOffers(platform.offers);
+        setCompanies(platform.companies);
+        setShopRows(platform.shopRows);
+        setYunPrice(platform.yunPrice);
+        setIntel(platform.intel);
+        saveReport({
+          id: crypto.randomUUID(),
+          query: q,
+          kind: k,
+          createdAt: nowLocal(),
+          yunPrice: platform.yunPrice,
+          identity: platform.identity,
+          alts: platform.alts.slice(0, 12),
+          offers: platform.offers,
+          companies: platform.companies,
+          shopRows: platform.shopRows,
+          steps: platform.steps,
+          intel: platform.intel,
+        });
+        toast.success(`已记下 ${q} 的分析`);
+        return;
+      }
       if (k === "part") {
         const results = await Promise.all(
           PART_STEPS.map((s) =>
