@@ -103,11 +103,19 @@ export const getReport = createServerFn({ method: "POST" })
   });
 
 export const submitReportReview = createServerFn({ method: "POST" })
-  .validator((input: { id: string; decision: "accept" | "reject" | "corrected"; note?: string }) => input)
+  .validator((input: {
+    id: string;
+    decision: "accept" | "reject" | "corrected";
+    note?: string;
+    correctedJson?: string;
+  }) => input)
   .handler(async ({ data }) => {
     const { reviewReportRow } = await import("./desk.server");
     if (!["accept", "reject", "corrected"].includes(data.decision)) {
       return { ok: false as const, error: "决定不合法" };
+    }
+    if (data.decision === "corrected" && !data.correctedJson?.trim()) {
+      return { ok: false as const, error: "修正需要 correctedJson" };
     }
     await reviewReportRow(data);
     return { ok: true as const };

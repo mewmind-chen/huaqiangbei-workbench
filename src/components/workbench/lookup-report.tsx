@@ -94,15 +94,22 @@ export function LookupReport({
     staleTime: 30_000,
   });
   const [reviewNote, setReviewNote] = useState("");
+  const [correctedJson, setCorrectedJson] = useState("");
   const reviewMut = useMutation({
     mutationFn: (decision: "accept" | "reject" | "corrected") =>
       submitReportReview({
-        data: { id: reportId ?? "", decision, note: reviewNote.trim() || undefined },
+        data: {
+          id: reportId ?? "",
+          decision,
+          note: reviewNote.trim() || undefined,
+          correctedJson: decision === "corrected" && correctedJson.trim() ? correctedJson.trim() : undefined,
+        },
       }),
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["report-review", reportId] });
       if (r.ok) {
         setReviewNote("");
+        setCorrectedJson("");
         toast.success("人工决定已保存（工作台持有）");
       } else {
         toast.error(r.error || "保存决定失败");
@@ -510,6 +517,7 @@ export function LookupReport({
                 ? ` · ${new Date(reviewQuery.data.reviewed_at).toLocaleString("zh-CN", { hour12: false })}`
                 : ""}
               {reviewQuery.data.review_note ? ` · ${reviewQuery.data.review_note}` : ""}
+              {reviewQuery.data.corrected_json ? " · 已保存修正内容" : ""}
             </p>
           ) : null}
           <div className="mt-3 flex flex-wrap gap-2">
@@ -524,8 +532,8 @@ export function LookupReport({
               size="sm"
               variant="secondary"
               onClick={() => {
-                if (!reviewNote.trim()) {
-                  toast.error("修正需要填写备注");
+                if (!correctedJson.trim()) {
+                  toast.error("修正需要填写修正后的 JSON");
                   return;
                 }
                 reviewMut.mutate("corrected");
@@ -536,10 +544,16 @@ export function LookupReport({
             </Button>
           </div>
           <Textarea
+            value={correctedJson}
+            onChange={(e) => setCorrectedJson(e.target.value)}
+            placeholder="修正后的报告 JSON（提交修正时必填）"
+            className="mt-3 min-h-[64px] font-mono text-xs"
+          />
+          <Textarea
             value={reviewNote}
             onChange={(e) => setReviewNote(e.target.value)}
-            placeholder="修正说明 / 备注（修正时必填）"
-            className="mt-3 min-h-[56px] text-xs"
+            placeholder="备注（可选）"
+            className="mt-3 min-h-[40px] text-xs"
           />
         </section>
       ) : null}

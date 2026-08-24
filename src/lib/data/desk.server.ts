@@ -236,22 +236,36 @@ export type ReportReviewInput = {
   id: string;
   decision: "accept" | "reject" | "corrected";
   note?: string;
+  correctedJson?: string;
 };
 
 export async function reviewReportRow(input: ReportReviewInput) {
   const sql = await getSql();
   await sql.query(
     `update search_reports
-       set decision = $2, reviewed_at = $3, review_note = $4
+       set decision = $2, reviewed_at = $3, review_note = $4, corrected_json = $5
      where id = $1`,
-    [input.id, input.decision, new Date().toISOString(), input.note ?? null],
+    [
+      input.id,
+      input.decision,
+      new Date().toISOString(),
+      input.note ?? null,
+      input.decision === "corrected" ? input.correctedJson ?? null : null,
+    ],
   );
 }
 
-export async function getReportReviewRow(id: string): Promise<{ decision: string | null; reviewed_at: string | null; review_note: string | null } | null> {
+export type ReportReviewRow = {
+  decision: string | null;
+  reviewed_at: string | null;
+  review_note: string | null;
+  corrected_json: string | null;
+};
+
+export async function getReportReviewRow(id: string): Promise<ReportReviewRow | null> {
   const sql = await getSql();
-  const rows = await sql.query<{ decision: string | null; reviewed_at: string | null; review_note: string | null }>(
-    "select decision, reviewed_at, review_note from search_reports where id = $1",
+  const rows = await sql.query<ReportReviewRow>(
+    "select decision, reviewed_at, review_note, corrected_json from search_reports where id = $1",
     [id],
   );
   return rows[0] ?? null;
