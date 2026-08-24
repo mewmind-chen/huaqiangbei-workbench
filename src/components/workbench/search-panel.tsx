@@ -93,6 +93,7 @@ function applyRecord(
     advice: (v: PlatformAdvice | null) => void;
     recommendation: (v: PlatformRecommendation | null) => void;
     platformDegradation: (v: PlatformDegradation | null) => void;
+    reportId: (v: string | undefined) => void;
   },
 ) {
   set.raw(record.query);
@@ -110,6 +111,7 @@ function applyRecord(
   set.advice(record.advice || null);
   set.recommendation(record.recommendation || null);
   set.platformDegradation(record.platformDegradation || null);
+  set.reportId(record.id || undefined);
 }
 
 function LookupView() {
@@ -142,6 +144,7 @@ function LookupView() {
   const [advice, setAdvice] = useState<PlatformAdvice | null>(null);
   const [recommendation, setRecommendation] = useState<PlatformRecommendation | null>(null);
   const [platformDegradation, setPlatformDegradation] = useState<PlatformDegradation | null>(null);
+  const [currentReportId, setCurrentReportId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     try {
@@ -177,6 +180,7 @@ function LookupView() {
     advice: setAdvice,
     recommendation: setRecommendation,
     platformDegradation: setPlatformDegradation,
+    reportId: setCurrentReportId,
   };
 
   const detected = useMemo(() => detectQuery(raw), [raw]);
@@ -214,6 +218,8 @@ function LookupView() {
     setBusy(true);
     setKind(k);
     setQueryUsed(q);
+    const reportId = crypto.randomUUID();
+    setCurrentReportId(reportId);
     setIdentity(null);
     setAlts([]);
     setOffers([]);
@@ -242,7 +248,7 @@ function LookupView() {
         setAdvice(platform.advice);
         setRecommendation(platform.recommendation);
         saveReport({
-          id: crypto.randomUUID(),
+          id: reportId,
           query: q,
           kind: k,
           createdAt: nowLocal(),
@@ -302,7 +308,7 @@ function LookupView() {
         setYunPrice(yun);
         setIntel(nextIntel);
         saveReport({
-          id: crypto.randomUUID(),
+          id: reportId,
           query: q,
           kind: "part",
           createdAt: nowLocal(),
@@ -373,7 +379,7 @@ function LookupView() {
         const nextSteps = [gysStep, shopStep, intelStep];
         setSteps(nextSteps);
         saveReport({
-          id: crypto.randomUUID(),
+          id: reportId,
           query: q,
           kind: "company",
           createdAt: nowLocal(),
@@ -574,6 +580,7 @@ function LookupView() {
             exactOnly={exactOnly}
             onExactOnly={setExactOnly}
             onSaveOffer={saveOffer}
+            reportId={currentReportId}
           />
         ) : null}
       </div>

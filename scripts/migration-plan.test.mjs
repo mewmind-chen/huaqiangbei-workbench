@@ -65,6 +65,7 @@ test("the workspace migration plan includes business migrations and keeps auth o
     { name: "0005_agent_research_constraints.sql", path: "0005_agent_research_constraints.sql" },
     { name: "0006_company_profiles.sql", path: "0006_company_profiles.sql" },
     { name: "0007_quote_lines_context_mpn_index.sql", path: "0007_quote_lines_context_mpn_index.sql" },
+    { name: "0008_report_review.sql", path: "0008_report_review.sql" },
   ]);
   assert.ok(readdirSync(join(migrationsDir, "auth")).includes("0001_auth.sql"));
 });

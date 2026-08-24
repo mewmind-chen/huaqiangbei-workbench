@@ -232,6 +232,31 @@ export async function deleteReportRow(id: string) {
   await sql.query("delete from search_reports where id = $1", [id]);
 }
 
+export type ReportReviewInput = {
+  id: string;
+  decision: "accept" | "reject" | "corrected";
+  note?: string;
+};
+
+export async function reviewReportRow(input: ReportReviewInput) {
+  const sql = await getSql();
+  await sql.query(
+    `update search_reports
+       set decision = $2, reviewed_at = $3, review_note = $4
+     where id = $1`,
+    [input.id, input.decision, new Date().toISOString(), input.note ?? null],
+  );
+}
+
+export async function getReportReviewRow(id: string): Promise<{ decision: string | null; reviewed_at: string | null; review_note: string | null } | null> {
+  const sql = await getSql();
+  const rows = await sql.query<{ decision: string | null; reviewed_at: string | null; review_note: string | null }>(
+    "select decision, reviewed_at, review_note from search_reports where id = $1",
+    [id],
+  );
+  return rows[0] ?? null;
+}
+
 export async function getReportRow(id: string): Promise<LookupRecord | null> {
   const sql = await getSql();
   const rows = await sql.query<ReportRow>("select payload from search_reports where id = $1", [id]);

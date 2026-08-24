@@ -1,10 +1,15 @@
 import { ArrowUpRight } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { PartArchive } from "@/components/workbench/part-archive";
 import { analyzePart, buildMarketCards, money, previousPartReport, stockText } from "@/lib/search/analyze";
 import type { CompanyCard, LcscAlt, ShopRow } from "@/lib/search/md-parse";
 import { summarizeCompanyInventory } from "@/lib/search/md-parse";
+import { getReportReview, submitReportReview } from "@/lib/data/desk";
 import type {
   IntelBrief,
   LiveOffer,
@@ -45,6 +50,7 @@ export function LookupReport({
   exactOnly,
   onExactOnly,
   onSaveOffer,
+  reportId,
 }: {
   kind: "part" | "company";
   query: string;
@@ -63,6 +69,7 @@ export function LookupReport({
   exactOnly: boolean;
   onExactOnly: (v: boolean) => void;
   onSaveOffer: (o: LiveOffer) => void;
+  reportId?: string;
 }) {
   const analysis = kind === "part" ? analyzePart(query, offers, identity, yunPrice) : null;
   const reportCache = useWorkbenchStore((s) => s.reportCache);
@@ -79,6 +86,29 @@ export function LookupReport({
       ? offers
       : offers.filter((o) => o.sourceKey === "lcsc" || o.model.toUpperCase() === query.toUpperCase());
   const stepLinks = steps.filter((s) => s.url);
+  const qc = useQueryClient();
+  const reviewQuery = useQuery({
+    queryKey: ["report-review", reportId],
+    queryFn: () => getReportReview({ data: { id: reportId ?? "" } }),
+    enabled: Boolean(reportId),
+    staleTime: 30_000,
+  });
+  const [reviewNote, setReviewNote] = useState("");
+  const reviewMut = useMutation({
+    mutationFn: (decision: "accept" | "reject" | "corrected") =>
+      submitReportReview({
+        data: { id: reportId ?? "", decision, note: reviewNote.trim() || undefined },
+      }),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["report-review", reportId] });
+      if (r.ok) {
+        setReviewNote("");
+        toast.success("人工决定已保存（工作台持有）");
+      } else {
+        toast.error(r.error || "保存决定失败");
+      }
+    },
+  });
 
   return (
     <div className="grid gap-5">
@@ -461,6 +491,56 @@ export function LookupReport({
               </a>
             ))}
           </div>
+        </section>
+      ) : null}
+
+      {reportId ? (
+        <section className="rounded-xl border border-line bg-surface p-4 lg:p-5">
+          <h3 className="text-sm font-semibold">人工决定</h3>
+          <p className="mt-1 text-xs text-muted">由工作台持久化最终动作；平台不写正式业务决定。</p>
+          {reviewQuery.data?.decision ? (
+            <p className="mt-3 rounded-lg bg-surface-2 px-3 py-2 text-xs text-muted">
+              已决定：
+              {reviewQuery.data.decision === "accept"
+                ? "接受"
+                : reviewQuery.data.decision === "reject"
+                  ? "拒绝"
+                  : "修正"}
+              {reviewQuery.data.reviewed_at
+                ? ` · ${new Date(reviewQuery.data.reviewed_at).toLocaleString("zh-CN", { hour12: false })}`
+                : ""}
+              {reviewQuery.data.review_note ? ` · ${reviewQuery.data.review_note}` : ""}
+            </p>
+          ) : null}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="secondary" onClick={() => reviewMut.mutate("accept")} disabled={reviewMut.isPending}>
+              接受此报告
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => reviewMut.mutate("reject")} disabled={reviewMut.isPending}>
+              拒绝此报告
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                if (!reviewNote.trim()) {
+                  toast.error("修正需要填写备注");
+                  return;
+                }
+                reviewMut.mutate("corrected");
+              }}
+              disabled={reviewMut.isPending}
+            >
+              提交修正
+            </Button>
+          </div>
+          <Textarea
+            value={reviewNote}
+            onChange={(e) => setReviewNote(e.target.value)}
+            placeholder="修正说明 / 备注（修正时必填）"
+            className="mt-3 min-h-[56px] text-xs"
+          />
         </section>
       ) : null}
     </div>

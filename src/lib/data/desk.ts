@@ -101,3 +101,21 @@ export const getReport = createServerFn({ method: "POST" })
     const { getReportRow } = await import("./desk.server");
     return getReportRow(data.id);
   });
+
+export const submitReportReview = createServerFn({ method: "POST" })
+  .validator((input: { id: string; decision: "accept" | "reject" | "corrected"; note?: string }) => input)
+  .handler(async ({ data }) => {
+    const { reviewReportRow } = await import("./desk.server");
+    if (!["accept", "reject", "corrected"].includes(data.decision)) {
+      return { ok: false as const, error: "决定不合法" };
+    }
+    await reviewReportRow(data);
+    return { ok: true as const };
+  });
+
+export const getReportReview = createServerFn({ method: "POST" })
+  .validator((input: { id: string }) => input)
+  .handler(async ({ data }) => {
+    const { getReportReviewRow } = await import("./desk.server");
+    return getReportReviewRow(data.id);
+  });
