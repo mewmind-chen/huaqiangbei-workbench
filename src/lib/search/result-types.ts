@@ -55,6 +55,12 @@ export type PlatformRecommendation = {
   reasoning?: string;
 };
 
+/** Safe, user-visible reason that an optional Platform enrichment was skipped. */
+export type PlatformDegradation = {
+  code: "timeout" | "unauthorized" | "server_error" | "unavailable" | "invalid_response";
+  message: "平台智能分析暂不可用，已改用本地数据。";
+};
+
 export type PartIdentity = {
   mpn: string;
   brand: string;
@@ -109,4 +115,5 @@ export type LookupRecord = {
   intel?: IntelBrief | null;
   advice?: PlatformAdvice | null;
   recommendation?: PlatformRecommendation | null;
+  platformDegradation?: PlatformDegradation | null;
 };

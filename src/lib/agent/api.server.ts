@@ -50,9 +50,9 @@ function newId(prefix: string): string {
   return `${prefix}-${rnd}`;
 }
 
-/** 可选共享密钥:设置了 AGENT_API_TOKEN 时强制校验(本地闭环可不设)。 */
+/** Workbench 入站密钥；与出站 Platform 密钥严格隔离。 */
 async function checkAuth(req: Request): Promise<boolean> {
-  const expected = String(process.env.AGENT_API_TOKEN || "").trim();
+  const expected = String(process.env.WORKBENCH_AGENT_API_TOKEN || "").trim();
   if (!expected) return true;
   const got = String(req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
   return got === expected;

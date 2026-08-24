@@ -21,16 +21,16 @@ export function agentApiPlugin() {
           return;
         }
         // 对抗审查 C(blocker): dev server 绑定 0.0.0.0(平台契约), 未设
-        // AGENT_API_TOKEN 时仅允许本机回环访问 —— 局域网主机不得读取内部
+        // WORKBENCH_AGENT_API_TOKEN 时仅允许本机回环访问 —— 局域网主机不得读取内部
         // 询价/报价等商业数据。设了 token 则交给 handler 内 Bearer 校验。
-        const tokenConfigured = Boolean(String(process.env.AGENT_API_TOKEN || "").trim());
+        const tokenConfigured = Boolean(String(process.env.WORKBENCH_AGENT_API_TOKEN || "").trim());
         if (!tokenConfigured) {
           const remote = String(req.socket?.remoteAddress || "");
           const loopback = remote === "127.0.0.1" || remote === "::1" || remote === "::ffff:127.0.0.1";
           if (!loopback) {
             res.statusCode = 403;
             res.setHeader("content-type", "application/json; charset=utf-8");
-            res.end(JSON.stringify({ ok: false, error: "forbidden: non-loopback client without AGENT_API_TOKEN" }));
+            res.end(JSON.stringify({ ok: false, error: "forbidden: non-loopback client without WORKBENCH_AGENT_API_TOKEN" }));
             return;
           }
         }

@@ -25,6 +25,16 @@ npm run dev
 
 查行情需要 [Firecrawl](https://www.firecrawl.dev/) Key，放在本机 `fetcher-config.json`，这个文件已加入 `.gitignore`，不要提交。
 
+### Agent Platform 环境变量
+
+复制 `.env.example` 后只在本机或部署平台配置实际值，绝不提交密钥：
+
+- `AGENT_API_URL`：可选，electronics-agent-platform 的地址，默认 `http://127.0.0.1:8787`。
+- `ELECTRONICS_AGENT_PLATFORM_TOKEN`：Workbench **出站**调用 Platform 的 Bearer token；不能用于 Workbench API。
+- `WORKBENCH_AGENT_API_TOKEN`：Workbench `/api/agent/*` **入站** API 与本地 Harness/MCP 的 Bearer token；不能用于 Platform。
+
+Platform 是可选智能增强：不可用、超时或鉴权失败时，工作台会继续执行本地公开查询。事实、约束、写库和最终决定始终留在 Workbench 与人工手里。
+
 ## 发布上线
 
 1. **GitHub**：本仓库就是源码。克隆后按上面本地运行即可。

@@ -12,7 +12,7 @@
  *   例: crontab 每天 07:30 -> 30 7 * * * cd <项目> && SNAPSHOT_CRON_ENABLE=1 node scripts/snapshot-cron.mjs
  */
 const BASE = (process.env.WORKBENCH_URL || "http://127.0.0.1:8080").replace(/\/+$/, "");
-const TOKEN = String(process.env.AGENT_API_TOKEN || "").trim();
+const TOKEN = String(process.env.WORKBENCH_AGENT_API_TOKEN || "").trim();
 const ENABLED = process.env.SNAPSHOT_CRON_ENABLE === "1";
 
 const args = Object.fromEntries(

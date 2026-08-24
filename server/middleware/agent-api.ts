@@ -46,15 +46,16 @@ export default defineEventHandler(async (event: H3Event) => {
       node.res.end(JSON.stringify({ ok: false, error: "handler missing" }));
       return;
     }
-    // 生产同样默认仅本机回环可访问, 需要公开访问时设 AGENT_API_TOKEN
-    const token = String(process.env.AGENT_API_TOKEN || "").trim();
+    // 生产同样默认仅本机回环可访问, 需要公开访问时设 WORKBENCH_AGENT_API_TOKEN。
+    // 这是 Workbench 入站凭据，不可复用出站 Platform 凭据。
+    const token = String(process.env.WORKBENCH_AGENT_API_TOKEN || "").trim();
     if (!token) {
       const remote = node.req.socket?.remoteAddress ?? "";
       const loopback = remote === "127.0.0.1" || remote === "::1" || remote === "::ffff:127.0.0.1";
       if (!loopback) {
         node.res.statusCode = 403;
         node.res.setHeader("content-type", "application/json; charset=utf-8");
-        node.res.end(JSON.stringify({ ok: false, error: "forbidden: set AGENT_API_TOKEN" }));
+        node.res.end(JSON.stringify({ ok: false, error: "forbidden: set WORKBENCH_AGENT_API_TOKEN" }));
         return;
       }
     }

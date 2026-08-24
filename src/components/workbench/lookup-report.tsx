@@ -10,6 +10,7 @@ import type {
   LiveOffer,
   PartIdentity,
   PlatformAdvice,
+  PlatformDegradation,
   PlatformRecommendation,
   SourceStatus,
 } from "@/lib/search/result-types";
@@ -39,6 +40,7 @@ export function LookupReport({
   intel,
   advice,
   recommendation,
+  platformDegradation,
   inquirers,
   exactOnly,
   onExactOnly,
@@ -56,6 +58,7 @@ export function LookupReport({
   intel?: IntelBrief | null;
   advice?: PlatformAdvice | null;
   recommendation?: PlatformRecommendation | null;
+  platformDegradation?: PlatformDegradation | null;
   inquirers: QuoteLine[];
   exactOnly: boolean;
   onExactOnly: (v: boolean) => void;
@@ -79,6 +82,13 @@ export function LookupReport({
 
   return (
     <div className="grid gap-5">
+      {platformDegradation ? (
+        <section className="rounded-xl border border-line bg-surface p-4 lg:p-5">
+          <h3 className="text-sm font-semibold">本地查询结果</h3>
+          <p className="mt-1 text-xs text-muted">已使用本地数据。平台智能分析本次未参与，事实、写库和最终决定仍由工作台与人工负责。</p>
+        </section>
+      ) : null}
+
       {identity ? <PartArchive identity={identity} alts={alts} intel={intel} /> : null}
 
       {kind === "company" && intel?.hits.length ? (

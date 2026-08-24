@@ -22,7 +22,7 @@ import {
 } from "@/lib/search/live-lookup";
 import type { CompanyCard, LcscAlt, ShopRow } from "@/lib/search/md-parse";
 import { detectQuery } from "@/lib/search/md-parse";
-import type { LookupRecord, PlatformAdvice, PlatformRecommendation } from "@/lib/search/result-types";
+import type { LookupRecord, PlatformAdvice, PlatformDegradation, PlatformRecommendation } from "@/lib/search/result-types";
 import { useTodoStore } from "@/lib/todo-store";
 import type { SearchTab } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -92,6 +92,7 @@ function applyRecord(
     intel: (v: IntelBrief | null) => void;
     advice: (v: PlatformAdvice | null) => void;
     recommendation: (v: PlatformRecommendation | null) => void;
+    platformDegradation: (v: PlatformDegradation | null) => void;
   },
 ) {
   set.raw(record.query);
@@ -108,6 +109,7 @@ function applyRecord(
   set.intel(record.intel || null);
   set.advice(record.advice || null);
   set.recommendation(record.recommendation || null);
+  set.platformDegradation(record.platformDegradation || null);
 }
 
 function LookupView() {
@@ -139,6 +141,7 @@ function LookupView() {
   const [intel, setIntel] = useState<IntelBrief | null>(null);
   const [advice, setAdvice] = useState<PlatformAdvice | null>(null);
   const [recommendation, setRecommendation] = useState<PlatformRecommendation | null>(null);
+  const [platformDegradation, setPlatformDegradation] = useState<PlatformDegradation | null>(null);
 
   useEffect(() => {
     try {
@@ -173,12 +176,13 @@ function LookupView() {
     intel: setIntel,
     advice: setAdvice,
     recommendation: setRecommendation,
+    platformDegradation: setPlatformDegradation,
   };
 
   const detected = useMemo(() => detectQuery(raw), [raw]);
   const query = picked || (detected.candidates.length === 1 ? detected.candidates[0] : "");
   const inquirers = queryUsed ? inquirersFor(queryUsed) : [];
-  const hasReport = Boolean(queryUsed && (identity || offers.length || companies.length || shopRows.length || intel || advice));
+  const hasReport = Boolean(queryUsed && (identity || offers.length || companies.length || shopRows.length || intel || advice || platformDegradation));
 
   useEffect(() => {
     if (!pendingReport) return;
@@ -219,13 +223,14 @@ function LookupView() {
     setIntel(null);
     setAdvice(null);
     setRecommendation(null);
+    setPlatformDegradation(null);
     const plan = k === "company" ? COMPANY_STEPS : PART_STEPS;
     setSteps(plan.map((s) => ({ key: s.key, name: s.name, url: "", status: "searching", count: 0 })));
     try {
       const platform = await researchViaPlatform({
         data: { query: q, kind: k, scrapeKey: scrapeKey.trim() || undefined },
       });
-      if (platform && (platform.identity || platform.offers.length || platform.companies.length || platform.shopRows.length || platform.advice)) {
+      if (platform && !("platformDegradation" in platform) && (platform.identity || platform.offers.length || platform.companies.length || platform.shopRows.length || platform.advice)) {
         setSteps(platform.steps);
         setIdentity(platform.identity);
         setAlts(platform.alts);
@@ -251,10 +256,13 @@ function LookupView() {
           intel: platform.intel,
           advice: platform.advice,
           recommendation: platform.recommendation,
+          platformDegradation: null,
         });
         toast.success(`已记下 ${q} 的分析`);
         return;
       }
+      const degradation = platform && "platformDegradation" in platform ? platform.platformDegradation : null;
+      setPlatformDegradation(degradation);
       if (k === "part") {
         const results = await Promise.all(
           PART_STEPS.map((s) =>
@@ -308,6 +316,7 @@ function LookupView() {
           intel: nextIntel,
           advice: null,
           recommendation: null,
+          platformDegradation: degradation,
         });
         toast.success(`已记下 ${q} 的分析`);
       } else {
@@ -378,6 +387,7 @@ function LookupView() {
           intel: nextIntel,
           advice: null,
           recommendation: null,
+          platformDegradation: degradation,
         });
         toast.success(`已记下 ${q} 的分析`);
       }
@@ -559,6 +569,7 @@ function LookupView() {
             intel={intel}
             advice={advice}
             recommendation={recommendation}
+            platformDegradation={platformDegradation}
             inquirers={inquirers}
             exactOnly={exactOnly}
             onExactOnly={setExactOnly}

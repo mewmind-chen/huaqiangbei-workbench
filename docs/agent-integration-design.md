@@ -66,7 +66,7 @@ Workbench Agent API(src/routes/api/agent/*,zod 校验)
 
 ## 5. 安全边界
 
-1. API 仅监听 localhost(dev);可选 `AGENT_API_TOKEN` 共享密钥(env),MCP 壳透传。
+1. API 仅监听 localhost(dev);可选 `WORKBENCH_AGENT_API_TOKEN` 入站密钥(env),MCP 壳透传。它与 Workbench 调用 electronics-agent-platform 使用的 `ELECTRONICS_AGENT_PLATFORM_TOKEN` 完全独立，二者不得互用。
 2. 无任意 SQL:全部白名单端点,zod 校验入参;SQL 一律参数化(沿用 getSql 惯例)。
 3. 报告入库硬校验:evidence_ids 引用不存在的证据 → 拒绝(M5 的程序级保证,而非靠 Skill 自觉)。
 4. 登录墙/抓取失败:沿用 `LookupStepResult.status`(ok/empty/skipped/error)结构化返回,Skill 规定遇 error 记 degrade 事件并换源,不重试撞墙。

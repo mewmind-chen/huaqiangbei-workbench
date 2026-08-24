@@ -13,7 +13,7 @@ import { z } from "zod";
 
 const BASE = (process.env.WORKBENCH_URL || "http://127.0.0.1:8080").replace(/\/+$/, "");
 const API = `${BASE}/api/agent`;
-const TOKEN = String(process.env.AGENT_API_TOKEN || "").trim();
+const TOKEN = String(process.env.WORKBENCH_AGENT_API_TOKEN || "").trim();
 
 async function call(path, body, { timeoutMs = 150_000 } = {}) {
   const headers = { "content-type": "application/json" };
