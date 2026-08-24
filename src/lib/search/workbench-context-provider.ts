@@ -13,7 +13,8 @@ export type QuotationContext = {
 export type QuotationContextRow = {
   mpn: string;
   status: string;
-  updatedAt: string;
+  /** Inquiry creation time; status edits do not create new demand. */
+  createdAt: string;
 };
 
 export function normalizeMpn(value: string): string {
@@ -34,15 +35,17 @@ export function buildQuotationContext(
 
   for (const row of rows) {
     if (normalizeMpn(row.mpn) !== normalized) continue;
-    const updatedAt = new Date(row.updatedAt).getTime();
-    if (Number.isFinite(updatedAt) && updatedAt > latest) {
-      latest = updatedAt;
-      lastQuotedAt = new Date(updatedAt).toISOString();
+    const createdAt = new Date(row.createdAt).getTime();
+    if (Number.isFinite(createdAt) && createdAt > latest) {
+      latest = createdAt;
+      lastQuotedAt = new Date(createdAt).toISOString();
     }
-    if (Number.isFinite(updatedAt) && updatedAt >= cutoff) recentCount += 1;
+    if (Number.isFinite(createdAt) && createdAt >= cutoff) recentCount += 1;
     if (row.status === "已完成") continue;
     openCount += 1;
   }
 
+  // recentCount and lastQuotedAt are demand timing (created_at), not workflow
+  // activity (updated_at), so later status edits cannot manufacture heat.
   return { source: "workbench", openCount, recentCount, lastQuotedAt };
 }

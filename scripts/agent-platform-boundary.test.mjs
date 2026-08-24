@@ -70,6 +70,13 @@ test("Workbench context provider performs an exact, parameterized, aggregate-onl
   const src = readFileSync(join(root, "src/lib/search/workbench-context-provider.server.ts"), "utf8");
   assert.match(src, /where upper\(trim\(mpn\)\) = \$1/i);
   assert.match(src, /\[normalized\]/);
-  assert.match(src, /select mpn, status, updated_at/i);
+  assert.match(src, /select mpn, status, created_at/i);
   assert.doesNotMatch(src, /customer|content|amount|price|insert into|update quote_lines|delete from/i);
+});
+
+test("normalized MPN lookup has an idempotent matching functional index", () => {
+  const migration = readFileSync(join(root, "migrations/0007_quote_lines_context_mpn_index.sql"), "utf8");
+  assert.match(migration, /create index if not exists quote_lines_mpn_normalized_idx/i);
+  assert.match(migration, /on quote_lines\s*\(upper\(trim\(mpn\)\)\)/i);
+  assert.doesNotMatch(migration, /customer|content|amount|price|update|delete/i);
 });

@@ -11,13 +11,15 @@ export async function getWorkbenchQuotationContext(mpn: string): Promise<Quotati
   if (!normalized) return buildQuotationContext("", []);
   const sql = await getSql();
   // Query only the exact normalized subject and the three aggregation inputs.
+  // It intentionally reads created_at: context heat counts new inquiries, not
+  // workflow edits. The functional index migration uses this exact predicate.
   // TypeScript repeats normalization defensively before aggregation.
-  const rows = await sql.query<{ mpn: string; status: string; updated_at: string }>(
-    "select mpn, status, updated_at from quote_lines where upper(trim(mpn)) = $1",
+  const rows = await sql.query<{ mpn: string; status: string; created_at: string }>(
+    "select mpn, status, created_at from quote_lines where upper(trim(mpn)) = $1",
     [normalized],
   );
   return buildQuotationContext(
     mpn,
-    rows.map((row) => ({ mpn: row.mpn, status: row.status, updatedAt: row.updated_at })),
+    rows.map((row) => ({ mpn: row.mpn, status: row.status, createdAt: row.created_at })),
   );
 }

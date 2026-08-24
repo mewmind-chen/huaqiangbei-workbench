@@ -35,6 +35,10 @@ npm run dev
 
 Platform 是可选智能增强：不可用、超时或鉴权失败时，工作台会继续执行本地公开查询。事实、约束、写库和最终决定始终留在 Workbench 与人工手里。
 
+### 内部询价上下文口径
+
+向 Platform 发送的询价上下文只包含同一标准化型号的聚合值：`openCount`、`recentCount`、`lastQuotedAt`。其中 `recentCount` 和 `lastQuotedAt` 都以询价首次创建时间 `quote_lines.created_at` 计算，窗口为最近 90 天；后续改状态、改备注不会被计为新需求。`openCount` 则按当前未完成状态计算。查询使用 `upper(trim(mpn)) = $1`，并由同表达式的函数索引支持；客户、内容、价格和金额不会被读取或出站。
+
 ## 发布上线
 
 1. **GitHub**：本仓库就是源码。克隆后按上面本地运行即可。
