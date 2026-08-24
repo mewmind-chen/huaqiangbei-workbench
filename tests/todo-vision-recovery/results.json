@@ -56,14 +56,15 @@
     "case5": { "status": "pass", "customer": "客户", "amount": null, "dueAt": null, "invented": false }
   },
   "ui": {
-    "clipboardPaste": { "status": "pass", "items": 1, "pendingBeforeConfirm": true, "autoSaved": false },
-    "upload": { "status": "blocked_by_chrome_extension", "error": "Not allowed" }
+    "clipboardPaste": { "status": "pass", "items": 1, "pendingBeforeConfirm": true, "autoSaved": false, "exactMpn": "TPS54560DDAR" },
+    "upload": { "status": "pass_in_app_browser", "items": 1, "pendingBeforeConfirm": true, "exactMpn": "TPS54560DDAR", "chromeExtensionFallback": "blocked: Not allowed (file URL access disabled)" }
   },
   "production": {
     "homepageHttpStatusBeforeDeploy": 200,
     "beforeDeployClipboard": { "status": "failed", "uiMessage": "识别服务暂不可用", "reason": "production still runs the pre-PR Todo xAI build" },
-    "todoRecognitionAfterDeploy": "not_verified",
-    "reason": "No Vercel CLI/project deployment credentials are available in this workspace; PR/preview deployment is required before live verification."
+    "homepageHttpStatusAfterDeploy": 200,
+    "todoRecognitionAfterDeploy": { "status": "pass", "model": "deepseek-v4-flash-vision-exp", "clipboard": "pass", "upload": "pass_in_app_browser", "pendingBeforeConfirm": true, "humanConfirmSave": "pass", "exactMpn": "TPS54560DDAR" },
+    "runtime": { "entry": "Cloudflare Tunnel hq.newmindchen.com -> 127.0.0.1:8091", "credentialSource": "existing Runtime credential store", "radarTouched": false }
   },
   "platformChanges": 0,
   "newApiContracts": 0,
