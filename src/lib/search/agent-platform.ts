@@ -4,15 +4,27 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import type { CompanyCard, LcscAlt, ShopRow } from "@/lib/search/md-parse";
-import { normalizePlatformAdvice, normalizePlatformRecommendation } from "@/lib/search/platform-contract";
+import {
+  normalizeCompanyProfile,
+  normalizePlatformAdvice,
+  normalizePlatformCards,
+  normalizePlatformEvidence,
+  normalizePlatformRecommendation,
+  normalizePlatformVerdict,
+} from "@/lib/search/platform-contract";
 import type {
+  CompanyProfileView,
   IntelBrief,
+  IntelligenceOrigin,
   LiveOffer,
   LookupStepResult,
   PartIdentity,
   PlatformAdvice,
   PlatformDegradation,
+  PlatformMarketCards,
   PlatformRecommendation,
+  ResearchEvidenceItem,
+  ResearchVerdict,
   SourceStatus,
 } from "@/lib/search/result-types";
 
@@ -30,6 +42,11 @@ export type PlatformLookup = {
   yunPrice: number | null;
   advice: PlatformAdvice | null;
   recommendation: PlatformRecommendation | null;
+  intelligenceOrigin: IntelligenceOrigin;
+  verdict: ResearchVerdict | null;
+  evidence: ResearchEvidenceItem[];
+  platformCards: PlatformMarketCards | null;
+  companyProfile: CompanyProfileView | null;
 };
 
 export type PlatformUnavailable = { platformDegradation: PlatformDegradation };
@@ -121,6 +138,11 @@ export const researchViaPlatform = createServerFn({ method: "POST" })
         yunPrice: null,
         advice: normalizePlatformAdvice(body.advice),
         recommendation: normalizePlatformRecommendation(body.recommendation),
+        intelligenceOrigin: "platform",
+        verdict: normalizePlatformVerdict(body.verdict),
+        evidence: normalizePlatformEvidence(body.evidence),
+        platformCards: normalizePlatformCards(body.cards),
+        companyProfile: null,
         steps: ["lcsc", "st", "hqew", "intel", "findchips", "icnet"].map((key) =>
           stepStatus(
             steps.find((s) => s.ok && s.step === key) || steps.find((s) => !s.ok && s.step === key),
@@ -145,6 +167,11 @@ export const researchViaPlatform = createServerFn({ method: "POST" })
       yunPrice: null,
       advice: null,
       recommendation: normalizePlatformRecommendation(body.recommendation),
+      intelligenceOrigin: "platform",
+      verdict: normalizePlatformVerdict(body.verdict),
+      evidence: normalizePlatformEvidence(body.evidence),
+      platformCards: null,
+      companyProfile: normalizeCompanyProfile(body.profile),
       steps: [
         { key: "gys", name: "华强供应商", url: "", status: (body.companies as unknown[])?.length ? "ok" : "empty", count: (body.companies as unknown[])?.length || 0 },
         { key: "shop", name: "商铺库存", url: "", status: (body.shopRows as unknown[])?.length ? "ok" : "empty", count: (body.shopRows as unknown[])?.length || 0 },

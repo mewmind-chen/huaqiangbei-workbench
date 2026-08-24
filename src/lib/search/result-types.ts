@@ -61,6 +61,59 @@ export type PlatformDegradation = {
   message: "平台智能分析暂不可用，已改用本地数据。";
 };
 
+export type IntelligenceOrigin = "platform" | "fallback";
+
+export type ResearchClaim = {
+  text: string;
+  evidenceId: string;
+};
+
+export type ResearchEvidenceItem = {
+  id: string;
+  sourceKey: string;
+  title: string;
+  url: string;
+  trust: string;
+};
+
+export type ResearchVerdict = {
+  state: string;
+  confidence: "high" | "medium" | "low";
+  score: number | null;
+  claims: ResearchClaim[];
+};
+
+export type PlatformMarketCardSlice = {
+  title?: string;
+  verdict?: string;
+  level?: string;
+  detail?: string;
+};
+
+export type PlatformMarketCards = {
+  hot?: PlatformMarketCardSlice;
+  supply?: PlatformMarketCardSlice;
+  price?: PlatformMarketCardSlice;
+};
+
+export type CompanyBrandClaim = {
+  brand: string;
+  evidenceId: string;
+  hits?: number;
+};
+
+export type CompanyMpnClaim = {
+  mpn: string;
+  evidenceId: string;
+  hits?: number;
+};
+
+export type CompanyProfileView = {
+  companyType?: string;
+  mainBrands: CompanyBrandClaim[];
+  topMpns: CompanyMpnClaim[];
+};
+
 export type PartIdentity = {
   mpn: string;
   brand: string;
@@ -116,4 +169,9 @@ export type LookupRecord = {
   advice?: PlatformAdvice | null;
   recommendation?: PlatformRecommendation | null;
   platformDegradation?: PlatformDegradation | null;
+  intelligenceOrigin?: IntelligenceOrigin;
+  verdict?: ResearchVerdict | null;
+  evidence?: ResearchEvidenceItem[];
+  platformCards?: PlatformMarketCards | null;
+  companyProfile?: CompanyProfileView | null;
 };

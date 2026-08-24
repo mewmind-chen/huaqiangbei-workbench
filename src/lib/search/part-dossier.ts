@@ -137,23 +137,15 @@ export function buildDossier(identity: PartIdentity, alts: LcscAlt[], intel?: In
   const replacements = alts.filter((a) => a.mpn.toUpperCase() !== identity.mpn.toUpperCase()).slice(0, 8);
   const who = [...new Set(apps.map((a) => a.who).filter(Boolean))];
   const catalogNotes = extra?.notes || [];
-  const intelNotes = (intel?.notes || []).filter(
-    (n) => !catalogNotes.some((e) => e.slice(0, 24) === n.slice(0, 24)),
-  );
-  const liveNotes = [...catalogNotes, ...intelNotes].slice(0, 8);
+  void intel;
   return {
     extra,
-    liveNotes,
+    liveNotes: catalogNotes.slice(0, 8),
     specs,
     apps,
     replacements,
     who,
     positioning: partPositioning(identity),
-    headline:
-      extra?.what.split("。")[0] ||
-      identity.summary ||
-      intel?.summary ||
-      identity.category ||
-      identity.mpn,
+    headline: extra?.what.split("。")[0] || identity.summary || identity.category || identity.mpn,
   };
 }

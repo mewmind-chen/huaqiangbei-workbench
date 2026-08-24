@@ -6,21 +6,26 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { PartArchive } from "@/components/workbench/part-archive";
-import { analyzePart, buildMarketCards, money, previousPartReport, stockText } from "@/lib/search/analyze";
+import { analyzePart, money, stockText } from "@/lib/search/analyze";
+import { presentCompanyIntelligence, presentPartIntelligence } from "@/lib/search/intelligence-presentation";
 import type { CompanyCard, LcscAlt, ShopRow } from "@/lib/search/md-parse";
 import { summarizeCompanyInventory } from "@/lib/search/md-parse";
 import { getReportReview, submitReportReview } from "@/lib/data/desk";
 import type {
+  CompanyProfileView,
   IntelBrief,
+  IntelligenceOrigin,
   LiveOffer,
   PartIdentity,
   PlatformAdvice,
   PlatformDegradation,
+  PlatformMarketCards,
   PlatformRecommendation,
+  ResearchEvidenceItem,
+  ResearchVerdict,
   SourceStatus,
 } from "@/lib/search/result-types";
 import type { QuoteLine } from "@/lib/types";
-import { useWorkbenchStore } from "@/lib/workbench-store";
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
@@ -46,6 +51,11 @@ export function LookupReport({
   advice,
   recommendation,
   platformDegradation,
+  intelligenceOrigin,
+  verdict,
+  evidence,
+  platformCards,
+  companyProfile,
   inquirers,
   exactOnly,
   onExactOnly,
@@ -65,6 +75,11 @@ export function LookupReport({
   advice?: PlatformAdvice | null;
   recommendation?: PlatformRecommendation | null;
   platformDegradation?: PlatformDegradation | null;
+  intelligenceOrigin?: IntelligenceOrigin;
+  verdict?: ResearchVerdict | null;
+  evidence?: ResearchEvidenceItem[];
+  platformCards?: PlatformMarketCards | null;
+  companyProfile?: CompanyProfileView | null;
   inquirers: QuoteLine[];
   exactOnly: boolean;
   onExactOnly: (v: boolean) => void;
@@ -72,14 +87,31 @@ export function LookupReport({
   reportId?: string;
 }) {
   const analysis = kind === "part" ? analyzePart(query, offers, identity, yunPrice) : null;
-  const reportCache = useWorkbenchStore((s) => s.reportCache);
-  const previous = kind === "part" ? previousPartReport(Object.values(reportCache), query) : null;
-  const market =
-    analysis && identity
-      ? buildMarketCards({ analysis, identity, inquirers, previous })
-      : analysis
-        ? buildMarketCards({ analysis, identity, inquirers, previous })
-        : [];
+  const origin: IntelligenceOrigin = platformDegradation ? "fallback" : intelligenceOrigin || "platform";
+  const partIntel =
+    kind === "part"
+      ? presentPartIntelligence({
+          origin,
+          analysis,
+          inquirers,
+          verdict,
+          evidence,
+          platformCards,
+          advice,
+          platformDegradation,
+        })
+      : null;
+  const companyIntel =
+    kind === "company"
+      ? presentCompanyIntelligence({
+          origin,
+          verdict,
+          evidence,
+          profile: companyProfile,
+          intelHits: intel?.hits,
+        })
+      : null;
+  const market = partIntel?.cards ?? [];
   const shopSummary = shopRows.length ? summarizeCompanyInventory(shopRows) : null;
   const visible =
     kind !== "part" || !exactOnly
@@ -119,10 +151,12 @@ export function LookupReport({
 
   return (
     <div className="grid gap-5">
-      {platformDegradation ? (
+      {platformDegradation || origin === "fallback" ? (
         <section className="rounded-xl border border-line bg-surface p-4 lg:p-5">
-          <h3 className="text-sm font-semibold">本地查询结果</h3>
-          <p className="mt-1 text-xs text-muted">已使用本地数据。平台智能分析本次未参与，事实、写库和最终决定仍由工作台与人工负责。</p>
+          <h3 className="text-sm font-semibold">本地降级结果</h3>
+          <p className="mt-1 text-xs text-muted">
+            这是降级信息，不是 Platform Intelligence。已使用本地数据。事实、写库和最终决定仍由工作台与人工负责。
+          </p>
         </section>
       ) : null}
 
@@ -130,11 +164,10 @@ export function LookupReport({
 
       {kind === "company" && intel?.hits.length ? (
         <section className="rounded-xl border border-line bg-surface p-4 lg:p-5">
-          <h3 className="text-sm font-semibold">公开介绍</h3>
-          <p className="mt-1 text-xs text-muted">AnySearch 公开页，只保留公司全名对得上的结果。不是库存。</p>
-          {intel.summary && !identity ? (
-            <p className="mt-3 text-sm leading-relaxed">{intel.summary}</p>
-          ) : null}
+          <h3 className="text-sm font-semibold">搜索片段</h3>
+          <p className="mt-1 text-xs text-muted">
+            公开搜索摘要，不是已验证结论。出现 authorized distributor 或品牌名也不自动变成授权/主营品牌。
+          </p>
           <ul className="mt-3 grid gap-2">
             {intel.hits.slice(0, 8).map((h) => (
               <li key={h.url || h.title} className="rounded-lg border border-line bg-surface-2 px-3 py-2">
@@ -153,15 +186,98 @@ export function LookupReport({
         </section>
       ) : null}
 
-      {kind === "part" && advice?.usedInternal ? (
+      {companyIntel ? (
+        <section className="rounded-xl border border-line bg-surface p-4 lg:p-5">
+          <h3 className="text-sm font-semibold">公司证据</h3>
+          <p className="mt-1 text-xs text-muted">
+            {origin === "platform"
+              ? `公开结论来自 Platform。状态 ${companyIntel.publicState}，置信度 ${companyIntel.confidence}。无 evidence 则保持 unknown。`
+              : "降级路径：不把搜索片段写成已验证公司事实。"}
+          </p>
+          {companyIntel.claims.length ? (
+            <ul className="mt-3 grid gap-2">
+              {companyIntel.claims.map((c) => (
+                <li key={`${c.evidenceId}-${c.text}`} className="rounded-lg border border-line bg-surface-2 px-3 py-3">
+                  <p className="text-sm font-semibold">{c.text}</p>
+                  <p className="mt-1 text-xs text-muted">
+                    证据 {c.evidence.title || c.evidenceId}
+                    {c.evidence.sourceKey ? ` · ${c.evidence.sourceKey}` : ""}
+                    {c.evidence.trust ? ` · 信任 ${c.evidence.trust}` : ""}
+                  </p>
+                  {c.evidence.url ? (
+                    <a href={c.evidence.url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center text-xs hover:underline">
+                      {c.evidence.url}
+                      <ArrowUpRight className="ml-1 size-3.5" />
+                    </a>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm text-muted">没有可引用的 claim。联系人、注册资本、主营品牌、热卖型号均不编造。</p>
+          )}
+          {companyIntel.mainBrands.length ? (
+            <p className="mt-3 text-xs text-muted">
+              已验证品牌 {companyIntel.mainBrands.map((b) => b.brand).join("、")}
+            </p>
+          ) : null}
+          {companyIntel.topMpns.length ? (
+            <p className="mt-1 text-xs text-muted">
+              已验证型号 {companyIntel.topMpns.map((m) => m.mpn).join("、")}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {kind === "part" && (partIntel?.internalAdvice?.usedInternal || advice?.usedInternal) ? (
         <section className="rounded-xl border border-line bg-surface p-4 lg:p-5">
           <h3 className="text-sm font-semibold">内部业务建议</h3>
           <p className="mt-1 text-xs text-muted">基于本工作台的汇总询价上下文，不是公开市场证据或成交结论。</p>
           <div className="mt-4 rounded-lg border border-line bg-surface-2 px-3 py-3">
-            <p className="text-sm font-semibold">{advice.action || recommendation?.action || "人工确认后报价"}</p>
-            {advice.internalView ? <p className="mt-2 text-xs leading-relaxed text-muted">{advice.internalView}</p> : null}
-            {advice.combined ? <p className="mt-2 text-xs leading-relaxed text-muted">{advice.combined}</p> : null}
+            <p className="text-sm font-semibold">{advice?.action || recommendation?.action || partIntel?.internalAdvice?.action || "人工确认后报价"}</p>
+            {advice?.internalView || partIntel?.internalAdvice?.internalView ? (
+              <p className="mt-2 text-xs leading-relaxed text-muted">{advice?.internalView || partIntel?.internalAdvice?.internalView}</p>
+            ) : null}
+            {advice?.combined || partIntel?.internalAdvice?.combined ? (
+              <p className="mt-2 text-xs leading-relaxed text-muted">{advice?.combined || partIntel?.internalAdvice?.combined}</p>
+            ) : null}
           </div>
+        </section>
+      ) : null}
+
+      {kind === "part" && partIntel ? (
+        <section className="rounded-xl border border-line bg-surface p-4 lg:p-5">
+          <h3 className="text-sm font-semibold">公开市场判断</h3>
+          <p className="mt-1 text-xs text-muted">
+            {partIntel.origin === "platform"
+              ? `唯一智能来源是 Platform。状态 ${partIntel.publicState}，置信度 ${partIntel.confidence}。`
+              : "降级信息，不是 Platform 智能结论。"}
+          </p>
+          {partIntel.claims.length ? (
+            <ul className="mt-3 grid gap-2">
+              {partIntel.claims.map((c) => {
+                const ev = partIntel.evidence.find((e) => e.id === c.evidenceId);
+                return (
+                  <li key={`${c.evidenceId}-${c.text}`} className="rounded-lg border border-line bg-surface-2 px-3 py-2">
+                    <p className="text-sm">{c.text}</p>
+                    <p className="mt-1 text-xs text-muted">
+                      {ev?.title || c.evidenceId}
+                      {ev?.sourceKey ? ` · ${ev.sourceKey}` : ""}
+                      {ev?.trust ? ` · 信任 ${ev.trust}` : ""}
+                    </p>
+                    {ev?.url ? (
+                      <a href={ev.url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center text-xs hover:underline">
+                        {ev.url}
+                        <ArrowUpRight className="ml-1 size-3.5" />
+                      </a>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm text-muted">公开证据不足：保持 unknown，不显示热门 / 缺货 / 涨价。</p>
+          )}
         </section>
       ) : null}
 
@@ -169,12 +285,17 @@ export function LookupReport({
         <section className="rounded-xl border border-line bg-surface p-4 lg:p-5">
           <h3 className="text-sm font-semibold">市场观察</h3>
           <p className="mt-1 text-xs text-muted">
-            热门 / 货 / 价来自立创现货、华强挂货和你自己的询价记录，不是烽火指数。
+            {partIntel?.origin === "platform"
+              ? "卡片只格式化 Platform 结论，不根据库存或询价改写。"
+              : "降级展示。数字可看，结论保持未知。"}
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {market.map((c) => (
               <div key={c.key} className="rounded-lg border border-line bg-surface-2 px-3 py-3">
-                <p className="text-xs text-muted">{c.title}</p>
+                <p className="text-xs text-muted">
+                  {c.title}
+                  {c.origin === "fallback" ? " · 降级" : ""}
+                </p>
                 <p className="mt-1 text-sm font-semibold">{c.verdict}</p>
                 <p className="mt-2 text-xs leading-relaxed text-muted">{c.detail}</p>
               </div>
@@ -343,8 +464,8 @@ export function LookupReport({
                   {c.memberYears ? `会员 ${c.memberYears} 年` : ""}
                   {c.founded ? ` 成立 ${c.founded}` : ""}
                 </p>
-                {c.brands.length ? (
-                  <p className="mt-2 text-xs text-muted">声明品牌 {c.brands.slice(0, 10).join("、")}</p>
+                  {c.brands.length ? (
+                  <p className="mt-2 text-xs text-muted">商铺声明品牌 {c.brands.slice(0, 10).join("、")}（不是已验证主营）</p>
                 ) : null}
                 {c.categories.length ? (
                   <p className="mt-1 text-xs text-faint">品类 {c.categories.slice(0, 8).join("、")}</p>
@@ -373,7 +494,7 @@ export function LookupReport({
           </ul>
           {shopSummary.topModels.length ? (
             <div className="mt-5">
-              <p className="text-xs text-muted">这一页库存靠前的型号</p>
+              <p className="text-xs text-muted">这一页库存靠前的型号（不是热卖结论）</p>
               <ul className="mt-2 grid gap-2 text-sm">
                 {shopSummary.topModels.slice(0, 10).map((m) => (
                   <li key={m.model} className="flex justify-between gap-3">

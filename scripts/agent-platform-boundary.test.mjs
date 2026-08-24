@@ -54,6 +54,8 @@ test("platform results are normalized before advice can be returned to the UI or
   assert.match(contract, /function normalizePlatformRecommendation/);
   assert.match(client, /normalizePlatformAdvice\(body\.advice\)/);
   assert.match(client, /normalizePlatformRecommendation\(body\.recommendation\)/);
+  assert.match(client, /normalizePlatformVerdict\(body\.verdict\)/);
+  assert.match(client, /normalizePlatformEvidence\(body\.evidence\)/);
   assert.match(panel, /platformDegradation/);
   assert.match(report, /platformDegradation/);
   assert.match(report, /已使用本地数据/);

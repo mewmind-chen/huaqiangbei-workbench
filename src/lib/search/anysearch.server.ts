@@ -138,20 +138,17 @@ export async function fetchIntelBrief(query: string, kind: "part" | "company"): 
 
 export function identityPatchFromIntel(query: string, brief: IntelBrief): PartIdentity {
   const stUrl = brief.hits.find((h) => /st\.com/i.test(h.url))?.url || "";
-  const apps = brief.notes
-    .filter((n) => /应用|用于|电机|USB|CAN|工控|消费|存储/.test(n))
-    .slice(0, 6);
   return {
     mpn: query,
     brand: "",
     category: "",
     package: "",
     desc: "",
-    summary: brief.summary,
-    features: brief.notes[0] || "",
+    summary: "",
+    features: "",
     lcscCode: "",
     specs: [],
-    applications: apps,
+    applications: [],
     longevity: "",
     active: false,
     lcscStock: null,

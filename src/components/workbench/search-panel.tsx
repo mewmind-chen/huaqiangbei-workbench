@@ -22,7 +22,17 @@ import {
 } from "@/lib/search/live-lookup";
 import type { CompanyCard, LcscAlt, ShopRow } from "@/lib/search/md-parse";
 import { detectQuery } from "@/lib/search/md-parse";
-import type { LookupRecord, PlatformAdvice, PlatformDegradation, PlatformRecommendation } from "@/lib/search/result-types";
+import type {
+  CompanyProfileView,
+  IntelligenceOrigin,
+  LookupRecord,
+  PlatformAdvice,
+  PlatformDegradation,
+  PlatformMarketCards,
+  PlatformRecommendation,
+  ResearchEvidenceItem,
+  ResearchVerdict,
+} from "@/lib/search/result-types";
 import { useTodoStore } from "@/lib/todo-store";
 import type { SearchTab } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -93,6 +103,11 @@ function applyRecord(
     advice: (v: PlatformAdvice | null) => void;
     recommendation: (v: PlatformRecommendation | null) => void;
     platformDegradation: (v: PlatformDegradation | null) => void;
+    intelligenceOrigin: (v: IntelligenceOrigin) => void;
+    verdict: (v: ResearchVerdict | null) => void;
+    evidence: (v: ResearchEvidenceItem[]) => void;
+    platformCards: (v: PlatformMarketCards | null) => void;
+    companyProfile: (v: CompanyProfileView | null) => void;
     reportId: (v: string | undefined) => void;
   },
 ) {
@@ -111,6 +126,11 @@ function applyRecord(
   set.advice(record.advice || null);
   set.recommendation(record.recommendation || null);
   set.platformDegradation(record.platformDegradation || null);
+  set.intelligenceOrigin(record.intelligenceOrigin || (record.platformDegradation ? "fallback" : "platform"));
+  set.verdict(record.verdict || null);
+  set.evidence(record.evidence || []);
+  set.platformCards(record.platformCards || null);
+  set.companyProfile(record.companyProfile || null);
   set.reportId(record.id || undefined);
 }
 
@@ -144,6 +164,11 @@ function LookupView() {
   const [advice, setAdvice] = useState<PlatformAdvice | null>(null);
   const [recommendation, setRecommendation] = useState<PlatformRecommendation | null>(null);
   const [platformDegradation, setPlatformDegradation] = useState<PlatformDegradation | null>(null);
+  const [intelligenceOrigin, setIntelligenceOrigin] = useState<IntelligenceOrigin>("platform");
+  const [verdict, setVerdict] = useState<ResearchVerdict | null>(null);
+  const [evidence, setEvidence] = useState<ResearchEvidenceItem[]>([]);
+  const [platformCards, setPlatformCards] = useState<PlatformMarketCards | null>(null);
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfileView | null>(null);
   const [currentReportId, setCurrentReportId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
@@ -180,13 +205,18 @@ function LookupView() {
     advice: setAdvice,
     recommendation: setRecommendation,
     platformDegradation: setPlatformDegradation,
+    intelligenceOrigin: setIntelligenceOrigin,
+    verdict: setVerdict,
+    evidence: setEvidence,
+    platformCards: setPlatformCards,
+    companyProfile: setCompanyProfile,
     reportId: setCurrentReportId,
   };
 
   const detected = useMemo(() => detectQuery(raw), [raw]);
   const query = picked || (detected.candidates.length === 1 ? detected.candidates[0] : "");
   const inquirers = queryUsed ? inquirersFor(queryUsed) : [];
-  const hasReport = Boolean(queryUsed && (identity || offers.length || companies.length || shopRows.length || intel || advice || platformDegradation));
+  const hasReport = Boolean(queryUsed && (identity || offers.length || companies.length || shopRows.length || intel || advice || verdict || evidence.length || platformDegradation));
 
   useEffect(() => {
     if (!pendingReport) return;
@@ -230,13 +260,18 @@ function LookupView() {
     setAdvice(null);
     setRecommendation(null);
     setPlatformDegradation(null);
+    setIntelligenceOrigin("platform");
+    setVerdict(null);
+    setEvidence([]);
+    setPlatformCards(null);
+    setCompanyProfile(null);
     const plan = k === "company" ? COMPANY_STEPS : PART_STEPS;
     setSteps(plan.map((s) => ({ key: s.key, name: s.name, url: "", status: "searching", count: 0 })));
     try {
       const platform = await researchViaPlatform({
         data: { query: q, kind: k, scrapeKey: scrapeKey.trim() || undefined },
       });
-      if (platform && !("platformDegradation" in platform) && (platform.identity || platform.offers.length || platform.companies.length || platform.shopRows.length || platform.advice)) {
+      if (platform && !("platformDegradation" in platform) && (platform.identity || platform.offers.length || platform.companies.length || platform.shopRows.length || platform.advice || platform.verdict || platform.evidence.length)) {
         setSteps(platform.steps);
         setIdentity(platform.identity);
         setAlts(platform.alts);
@@ -247,6 +282,11 @@ function LookupView() {
         setIntel(platform.intel);
         setAdvice(platform.advice);
         setRecommendation(platform.recommendation);
+        setIntelligenceOrigin("platform");
+        setVerdict(platform.verdict);
+        setEvidence(platform.evidence);
+        setPlatformCards(platform.platformCards);
+        setCompanyProfile(platform.companyProfile);
         saveReport({
           id: reportId,
           query: q,
@@ -263,12 +303,22 @@ function LookupView() {
           advice: platform.advice,
           recommendation: platform.recommendation,
           platformDegradation: null,
+          intelligenceOrigin: "platform",
+          verdict: platform.verdict,
+          evidence: platform.evidence,
+          platformCards: platform.platformCards,
+          companyProfile: platform.companyProfile,
         });
         toast.success(`已记下 ${q} 的分析`);
         return;
       }
       const degradation = platform && "platformDegradation" in platform ? platform.platformDegradation : null;
       setPlatformDegradation(degradation);
+      setIntelligenceOrigin("fallback");
+      setVerdict(null);
+      setEvidence([]);
+      setPlatformCards(null);
+      setCompanyProfile(null);
       if (k === "part") {
         const results = await Promise.all(
           PART_STEPS.map((s) =>
@@ -323,6 +373,11 @@ function LookupView() {
           advice: null,
           recommendation: null,
           platformDegradation: degradation,
+          intelligenceOrigin: "fallback",
+          verdict: null,
+          evidence: [],
+          platformCards: null,
+          companyProfile: null,
         });
         toast.success(`已记下 ${q} 的分析`);
       } else {
@@ -332,9 +387,9 @@ function LookupView() {
         ]);
         let shopUrl = "";
         let nextCompanies: CompanyCard[] = [];
-        let nextIntel: IntelBrief | null = intelRes.ok ? intelRes.intel || null : null;
+        const nextIntel: IntelBrief | null = intelRes.ok ? intelRes.intel || null : null;
         let gysStep: SourceStatus = { key: "gys", name: "华强供应商", url: "", status: "error", count: 0 };
-        let intelStep: SourceStatus = intelRes.ok
+        const intelStep: SourceStatus = intelRes.ok
           ? {
               key: "intel",
               name: "公开资料",
@@ -394,6 +449,11 @@ function LookupView() {
           advice: null,
           recommendation: null,
           platformDegradation: degradation,
+          intelligenceOrigin: "fallback",
+          verdict: null,
+          evidence: [],
+          platformCards: null,
+          companyProfile: null,
         });
         toast.success(`已记下 ${q} 的分析`);
       }
@@ -576,6 +636,11 @@ function LookupView() {
             advice={advice}
             recommendation={recommendation}
             platformDegradation={platformDegradation}
+            intelligenceOrigin={intelligenceOrigin}
+            verdict={verdict}
+            evidence={evidence}
+            platformCards={platformCards}
+            companyProfile={companyProfile}
             inquirers={inquirers}
             exactOnly={exactOnly}
             onExactOnly={setExactOnly}

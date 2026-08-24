@@ -1,5 +1,5 @@
-import type { LiveOffer, LookupRecord, PartIdentity } from "@/lib/search/result-types";
-import type { QuoteLine } from "@/lib/types";
+import type { LiveOffer, LookupRecord, PartIdentity } from "./result-types.ts";
+import type { QuoteLine } from "../types.ts";
 
 export function money(n: number | null) {
   if (n == null) return "询价";
@@ -189,6 +189,7 @@ export type MarketCard = {
   verdict: string;
   detail: string;
   level: "high" | "mid" | "low" | "unknown";
+  origin?: "platform" | "fallback";
 };
 
 export function previousPartReport(reports: LookupRecord[], query: string, currentId?: string) {
@@ -199,96 +200,41 @@ export function previousPartReport(reports: LookupRecord[], query: string, curre
   return matches[1] ?? null;
 }
 
-export function buildMarketCards(opts: {
+/**
+ * Local helper kept for call-site compatibility.
+ * It no longer infers 热门 / 缺货 / 涨价 from inventory or quotation counts.
+ * Part intelligence presentation lives in presentPartIntelligence.
+ */
+export function buildMarketCards(_opts: {
   analysis: PartAnalysis;
   identity: PartIdentity | null;
   inquirers: QuoteLine[];
   previous?: LookupRecord | null;
 }): MarketCard[] {
-  const { analysis, identity, inquirers, previous } = opts;
-  const suppliers = analysis.suppliers.length || analysis.offerCount;
-  const local = inquirers.filter((q) => q.status !== "已完成").length;
-  let hotVerdict = "公开页挂得不多";
-  let hotLevel: MarketCard["level"] = "low";
-  if (local >= 2 && suppliers >= 12) {
-    hotVerdict = "你手头在询，市场上也常挂";
-    hotLevel = "high";
-  } else if (suppliers >= 20) {
-    hotVerdict = "挂货商家多，公开页上看着常走";
-    hotLevel = "high";
-  } else if (local >= 1) {
-    hotVerdict = "至少有客户在询这颗料";
-    hotLevel = "mid";
-  } else if (suppliers >= 8) {
-    hotVerdict = "有一定挂货，谈不上爆款";
-    hotLevel = "mid";
-  }
-  const hot: MarketCard = {
-    key: "hot",
-    title: "热门",
-    verdict: hotVerdict,
-    detail: `华强本型号 ${analysis.offerCount} 家挂货；你这边未完成询价 ${local} 条。不是烽火搜索指数。`,
-    level: hotLevel,
-  };
-
-  const lcsc = analysis.lcscStock;
-  const hang = analysis.totalStock;
-  let supplyVerdict = "公开页上看一般";
-  let supplyLevel: MarketCard["level"] = "mid";
-  if (lcsc != null && lcsc >= 50000) {
-    supplyVerdict = "立创现货足，偏松";
-    supplyLevel = "low";
-  } else if (lcsc != null && lcsc < 1000 && hang < 5000) {
-    supplyVerdict = "立创和挂货都不多，偏紧";
-    supplyLevel = "high";
-  } else if (lcsc != null && lcsc < 3000) {
-    supplyVerdict = "立创现货不多，要注意交期";
-    supplyLevel = "high";
-  } else if (lcsc == null && hang === 0) {
-    supplyVerdict = "这一页没取到库存数字";
-    supplyLevel = "unknown";
-  }
-  const supply: MarketCard = {
-    key: "supply",
-    title: "货",
-    verdict: supplyVerdict,
-    detail: `立创现货 ${stockText(lcsc)}；华强挂货合计 ${stockText(hang)}（询价数量，不是成交库存）。`,
-    level: supplyLevel,
-  };
-
-  const prevLcsc = previous?.identity?.priceBreaks?.[0]?.price ?? null;
-  const nowLcsc = analysis.lcscPrice;
-  let priceVerdict = "还不能判断涨跌";
-  let priceLevel: MarketCard["level"] = "unknown";
-  let priceDetail = `立创 1+ ${money(nowLcsc)}`;
-  if (analysis.minPrice != null) priceDetail += `，挂货最低 ${money(analysis.minPrice)}（挂价）`;
-  if (analysis.lcscBreaks.length >= 2) {
-    const last = analysis.lcscBreaks[analysis.lcscBreaks.length - 1];
-    priceDetail += `；量大 ${last.qty}+ ${money(last.price)}`;
-  }
-  if (prevLcsc != null && nowLcsc != null && prevLcsc > 0) {
-    const pct = ((nowLcsc - prevLcsc) / prevLcsc) * 100;
-    if (pct >= 5) {
-      priceVerdict = `比上次立创 1+ 高 ${pct.toFixed(1)}%`;
-      priceLevel = "high";
-    } else if (pct <= -5) {
-      priceVerdict = `比上次立创 1+ 低 ${Math.abs(pct).toFixed(1)}%`;
-      priceLevel = "low";
-    } else {
-      priceVerdict = "和上次立创价差不多";
-      priceLevel = "mid";
-    }
-    priceDetail += `。上次 ${money(prevLcsc)}。`;
-  } else {
-    priceDetail += "。本机还没有上次快照，不编「涨价快」。";
-  }
-  const price: MarketCard = {
-    key: "price",
-    title: "价",
-    verdict: priceVerdict,
-    detail: priceDetail,
-    level: priceLevel,
-  };
-
-  return [hot, supply, price];
+  return [
+    {
+      key: "hot",
+      title: "热门",
+      verdict: "未知",
+      detail: "本地不再根据挂货数量或询价条数推断热门。",
+      level: "unknown",
+      origin: "fallback",
+    },
+    {
+      key: "supply",
+      title: "货",
+      verdict: "未知",
+      detail: "本地不再根据库存数字推断缺货或宽松。",
+      level: "unknown",
+      origin: "fallback",
+    },
+    {
+      key: "price",
+      title: "价",
+      verdict: "未知",
+      detail: "本地不编涨价。",
+      level: "unknown",
+      origin: "fallback",
+    },
+  ];
 }
