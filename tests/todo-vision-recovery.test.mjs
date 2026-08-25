@@ -26,7 +26,7 @@ const cases = [
     },
   },
   {
-    name: "CASE2 shipping tomorrow",
+    name: "CASE3 shipping tomorrow",
     response: JSON.stringify({
       items: [
         {
@@ -44,7 +44,7 @@ const cases = [
     },
   },
   {
-    name: "CASE3 invoice today without invented date",
+    name: "REGRESSION invoice today without invented date",
     response: JSON.stringify({
       items: [
         {
@@ -63,7 +63,7 @@ const cases = [
     },
   },
   {
-    name: "CASE4 independent items stay separate",
+    name: "CASE2 independent items stay separate",
     response: JSON.stringify({
       items: [
         { customer: "客户", type: "报价", content: "TPS54560DDAR 1000pcs 报价", amount: null, dueAt: null },
@@ -76,7 +76,7 @@ const cases = [
     },
   },
   {
-    name: "CASE5 fuzzy image does not invent fields",
+    name: "CASE4 fuzzy image does not invent fields",
     response: JSON.stringify({
       items: [{ customer: "客户", type: "其他", content: "图片内容不清晰", amount: null, dueAt: null }],
     }),
@@ -87,10 +87,21 @@ const cases = [
       assert.equal(items[0].dueAt, null);
     },
   },
+  {
+    name: "CASE5 empty image returns no_todo_detected",
+    response: JSON.stringify({ items: [] }),
+    expectError: /no_todo_detected/,
+  },
 ];
 
 for (const fixture of cases) {
-  test(fixture.name, () => fixture.check(extractTodoItems(fixture.response)));
+  test(fixture.name, () => {
+    if (fixture.expectError) {
+      assert.throws(() => extractTodoItems(fixture.response), fixture.expectError);
+      return;
+    }
+    fixture.check(extractTodoItems(fixture.response));
+  });
 }
 
 test("Todo recognition source has no Todo xAI dependency and preserves pending array", () => {

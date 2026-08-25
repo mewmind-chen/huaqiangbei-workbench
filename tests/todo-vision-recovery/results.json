@@ -50,23 +50,24 @@
   ],
   "fixtures": {
     "case1": { "status": "pass", "type": "报价", "exactMpn": "TPS54560DDAR", "amount": null, "dueAt": null },
-    "case2": { "status": "pass", "type": "发货", "amount": null, "dueAt": null },
-    "case3": { "status": "pass", "type": "发票", "amount": null, "dueAt": null },
-    "case4": { "status": "pass", "items": 2, "merged": false },
-    "case5": { "status": "pass", "customer": "客户", "amount": null, "dueAt": null, "invented": false }
+    "case2": { "status": "pass", "items": 2, "merged": false, "mpns": ["TPS54560DDAR", null] },
+    "case3": { "status": "pass", "type": "发货", "amount": null, "dueAt": null },
+    "case4": { "status": "pass", "customer": "客户", "amount": null, "dueAt": null, "invented": false },
+    "case5": { "status": "pass", "error": "no_todo_detected" },
+    "invoiceRegression": { "status": "pass", "type": "发票", "amount": null, "dueAt": null }
   },
   "ui": {
     "clipboardPaste": { "status": "pass", "items": 1, "pendingBeforeConfirm": true, "autoSaved": false, "exactMpn": "TPS54560DDAR" },
-    "upload": { "status": "pass_in_app_browser", "items": 1, "pendingBeforeConfirm": true, "exactMpn": "TPS54560DDAR", "chromeExtensionFallback": "blocked: Not allowed (file URL access disabled)" }
+    "upload": { "status": "pass_in_app_browser", "items": 1, "pendingBeforeConfirm": true, "exactMpn": "TPS54560DDAR", "autoSaved": false },
+    "multiItemUpload": { "status": "pass_in_app_browser", "items": 2, "merged": false, "pendingBeforeConfirm": true, "editDialog": true, "discardOne": true, "autoSaved": false }
   },
   "production": {
-    "homepageHttpStatusBeforeDeploy": 200,
-    "beforeDeployClipboard": { "status": "failed", "uiMessage": "识别服务暂不可用", "reason": "production still runs the pre-PR Todo xAI build" },
-    "homepageHttpStatusAfterDeploy": 200,
-    "todoRecognitionAfterDeploy": { "status": "pass", "model": "deepseek-v4-flash-vision-exp", "clipboard": "pass", "upload": "pass_in_app_browser", "pendingBeforeConfirm": true, "humanConfirmSave": "pass", "exactMpn": "TPS54560DDAR" },
-    "runtime": { "entry": "Cloudflare Tunnel hq.newmindchen.com -> 127.0.0.1:8091", "credentialSource": "existing Runtime credential store", "ingressPortChanged": "8081 -> 8091", "radarTouched": false }
+    "homepageHttpStatus": 200,
+    "initialRuntimeProbe": { "status": "blocked", "error": "vision_not_configured", "reason": "8091 process had no server-side DeepSeek credential" },
+    "todoRecognitionAfterRuntimeCredentialInjection": { "status": "pass", "model": "deepseek-v4-flash-vision-exp", "clipboard": "pass", "upload": "pass_in_app_browser", "multiItemUpload": "pass_in_app_browser", "pendingBeforeConfirm": true, "autoSaved": false, "exactMpn": "TPS54560DDAR" },
+    "runtime": { "entry": "Cloudflare Tunnel hq.newmindchen.com -> 127.0.0.1:8091", "credentialSource": "existing DSH credential store, injected into server process only", "clientBundleKeyScan": "none", "radarTouched": false }
   },
   "platformChanges": 0,
   "newApiContracts": 0,
-  "tests": { "npmTest": "pass: 160 + 44", "typecheck": "pass", "build": "pass" }
+  "tests": { "npmTest": "pass: 160 + 45", "typecheck": "pass", "build": "pass" }
 }

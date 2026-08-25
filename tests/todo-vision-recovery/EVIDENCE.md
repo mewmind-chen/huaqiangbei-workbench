@@ -4,7 +4,7 @@ Date: 2026-08-25 (Asia/Shanghai)
 
 ## Current provider audit
 
-The process environment did not contain the Vision keys. The existing local Runtime credential store contained configured values for DeepSeek, OpenRouter, and the describe-image provider. Only boolean presence is recorded in `results.json`; no secret values are stored here.
+The initial 8091 process did not contain the server-side Vision credential and returned the explicit `vision_not_configured` state. The existing DSH credential store contained a configured DeepSeek credential; it was injected into the restarted server process only. No secret value is recorded here or in `results.json`.
 
 The direct capability probe used the existing `DEEPSEEK_API_KEY` credential with the project fixture `quote-tps54560.png`. `deepseek-v4-flash-vision-exp` returned HTTP 200 in about 1.4 seconds with the expected JSON text response. The request used an OpenAI-compatible image block (`data:image/png;base64,...`). A second existing describe-image/GLM path also returned HTTP 200, but DeepSeek was selected because it is the previously verified project Vision path and is directly callable from Workbench with the existing credential. No router or fallback was added.
 
@@ -14,22 +14,23 @@ The direct capability probe used the existing `DEEPSEEK_API_KEY` credential with
 
 The DeepSeek provider is only responsible for image plus prompt to model response. Todo type validation, field normalization, multi-item handling, preview, editing, and saving remain in Workbench. Platform was not modified and no new API contract was added.
 
-The current production path is the existing Cloudflare Tunnel entry for `hq.newmindchen.com`, routed to the Workbench preview on loopback port `8091`; the Radar process and its `radar.newmindchen.com` route remain untouched. The runtime key is read from the existing local Platform/Runtime credential store and is not committed.
+The current production path is the existing Cloudflare Tunnel entry for `hq.newmindchen.com`, routed to the Workbench preview on loopback port `8091`; the Radar process and its `radar.newmindchen.com` route remain untouched. The runtime key is read from the existing DSH credential store into the server process and is not committed, bundled, or logged.
 
 ## Fixture results
 
-The five parser fixtures in `tests/todo-vision-recovery.test.mjs` pass. CASE1 preserves `TPS54560DDAR` exactly and leaves absent amount/date as `null`; CASE2 is `发货`; CASE3 is `发票`; CASE4 remains two independent drafts; CASE5 does not invent a customer, amount, or date.
+The five acceptance fixtures plus one invoice regression in `tests/todo-vision-recovery.test.mjs` pass. CASE1 preserves `TPS54560DDAR` exactly; CASE2 returns two independent drafts without merging; CASE3 returns `发货`; CASE4 does not invent customer, amount, or date; CASE5 returns `no_todo_detected`. The invoice regression still preserves `发票` with null amount/date.
 
 ## UI results
 
-Clipboard paste was exercised against `https://hq.newmindchen.com/` with the real image fixture. DeepSeek returned one draft, the UI showed `识别结果（逐条确认）` and `尚未保存 1 条`, and no Todo Store row existed until `确认保存` was clicked. The draft preserved `TPS54560DDAR`; after confirmation, the Todo Store showed the saved row and `已保存 1 条待办`.
+Clipboard paste was exercised against `https://hq.newmindchen.com/` with the redacted quote fixture. DeepSeek returned one draft, the UI showed `识别结果（逐条确认）` and `尚未保存 1 条`, and no Todo Store row was created during this acceptance run. The draft preserved `TPS54560DDAR`.
 
-Production upload was exercised through the in-app browser file chooser with the same fixture and returned one pending draft with exact `TPS54560DDAR`; confirmation saved it. The external Chrome extension file chooser separately returned `Not allowed` because file URL access is disabled; enable Chrome extension Details → **Allow access to file URLs** to repeat that browser-specific path. This is an environment permission issue, not an application error.
+Production upload was exercised through the in-app browser file chooser with the same fixture and returned one pending draft with exact `TPS54560DDAR`. A synthetic, non-customer two-item image returned two separate pending rows (`TPS54560DDAR 1000pcs 报价` and `明天安排开发票`); the first opened the edit dialog and the second was discarded independently. No confirm/save action was executed in this run, so no acceptance fixture was persisted.
 
 ## Verification
 
-- `npm test`: pass (160 script tests + 44 TypeScript/test suites)
+- `npm test`: pass (160 script tests + 45 TypeScript/test suites)
 - `npm run typecheck`: pass
 - `npm run build`: pass
-- Production homepage is HTTP 200 after deployment. Live clipboard and upload both reached DeepSeek Vision, produced `RecognizeDraft[]`, kept the draft pending until human confirmation, and saved only after `确认保存`. The production model is `deepseek-v4-flash-vision-exp`; no XAI credential, URL, model, retry, or fallback is in the Todo Recognition chain.
+- Production homepage is HTTP 200. Live clipboard and upload reached DeepSeek Vision, produced `RecognizeDraft[]`, kept drafts pending until human confirmation, and did not auto-save. The production model is `deepseek-v4-flash-vision-exp`; no XAI credential, URL, model, retry, or fallback is in the Todo Recognition chain.
+- The built client bundle contains no `DEEPSEEK_API_KEY`, DeepSeek endpoint, or provider credential reference; the server bundle contains the server-only provider call.
 - A stale/corrupt local PGLite directory was preserved at `.data/pglite-corrupt-20260825`; the live preview uses a fresh `.data/pglite-live` directory so the runtime remains healthy. No Radar files or processes were changed.
