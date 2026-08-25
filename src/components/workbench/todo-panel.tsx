@@ -40,7 +40,7 @@ import {
   tomorrowOffWork,
 } from "@/lib/dates";
 import { blobToJpegBase64 } from "@/lib/image";
-import { recognizeChatShot } from "@/lib/recognize";
+import { recognizeChatShot, visionErrorMessage } from "@/lib/recognize";
 import { emptyDraft, useTodoStore } from "@/lib/todo-store";
 import { detectQuery } from "@/lib/search/md-parse";
 import {
@@ -98,8 +98,8 @@ export function TodoPanel() {
   const [typeFilter, setTypeFilter] = useState<"all" | ItemType>("all");
   const [searchText, setSearchText] = useState("");
   const [busy, setBusy] = useState(false);
-  const [pending, setPending] = useState<RecognizeDraft | null>(null);
-  const [editPending, setEditPending] = useState(false);
+  const [pending, setPending] = useState<RecognizeDraft[]>([]);
+  const [editPendingIndex, setEditPendingIndex] = useState<number | null>(null);
   const [shipFrom, setShipFrom] = useState<TodoItem | null>(null);
   const [shipDue, setShipDue] = useState("");
   const [shipNote, setShipNote] = useState("");
@@ -192,17 +192,16 @@ export function TodoPanel() {
       const image = await blobToJpegBase64(blob);
       const result = await recognizeChatShot({ data: { image, mime: "image/jpeg" } });
       if (!result.ok) {
-        toast.error(result.error);
+        toast.error(visionErrorMessage(result.error));
         return;
       }
-      const one = result.items[0];
-      if (!one) {
+      if (!result.items.length) {
         toast.error("没识别到事项，请手动填写");
         return;
       }
-      setPending(one);
-      setEditPending(false);
-      toast.success("识别成功，请确认后保存");
+      setPending(result.items);
+      setEditPendingIndex(null);
+      toast.success(`识别到 ${result.items.length} 条事项，请逐条确认后保存`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "识别失败");
     } finally {
@@ -242,10 +241,19 @@ export function TodoPanel() {
     toast.success("已记入待处理");
   }
 
-  function savePending(row: RecognizeDraft) {
+  function updatePending(index: number, patch: Partial<RecognizeDraft>) {
+    setPending((rows) => rows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
+  }
+
+  function discardPending(index: number) {
+    setPending((rows) => rows.filter((_, rowIndex) => rowIndex !== index));
+    setEditPendingIndex(null);
+  }
+
+  function savePending(row: RecognizeDraft, index: number) {
     if (!row.customer.trim()) {
       toast.error("请先改后存，补上客户名");
-      setEditPending(true);
+      setEditPendingIndex(index);
       return;
     }
     addItem({
@@ -256,9 +264,8 @@ export function TodoPanel() {
       dueAt: row.dueAt,
       priority: row.priority || "普通",
     });
-    setPending(null);
-    setEditPending(false);
-    toast.success("已保存");
+    discardPending(index);
+    toast.success("已保存 1 条待办");
   }
 
   function complete(item: TodoItem) {
@@ -585,7 +592,7 @@ export function TodoPanel() {
                   <p className="text-sm">截图后按 Ctrl+V 粘贴识别</p>
                   <p className="text-xs text-muted">自动提取客户、类型、内容、金额，或点这里选图</p>
                   {busy ? <p className="text-xs text-accent">识别中…</p> : null}
-                  {pending ? <p className="text-xs text-ok">已识别，请在右侧确认</p> : null}
+                  {pending.length ? <p className="text-xs text-ok">已识别 {pending.length} 条，请在右侧逐条确认</p> : null}
                 </button>
               ) : (
                 <div className="grid gap-3">
@@ -706,34 +713,34 @@ export function TodoPanel() {
           </aside>
 
           <section className="min-w-0">
-            {pending ? (
-              <div className="mb-4 rounded-xl border border-accent/40 bg-surface p-4">
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <h3 className="text-sm font-semibold">{pending.customer || "（未识别客户）"}</h3>
-                  <Badge variant="outline">{pending.type}</Badge>
-                  {pending.amount != null ? <span className="text-xs font-medium">{amountText(pending.amount)}</span> : null}
-                  <Badge variant="progress">待确认</Badge>
+            {pending.length ? (
+              <div className="mb-4 grid gap-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">识别结果（逐条确认）</h3>
+                  <span className="text-xs text-muted">尚未保存 {pending.length} 条</span>
                 </div>
-                <p className="text-sm leading-relaxed">{pending.content || "（无内容）"}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button type="button" size="sm" onClick={() => savePending(pending)}>
-                    保存
-                  </Button>
-                  <Button type="button" size="sm" variant="secondary" onClick={() => setEditPending(true)}>
-                    改后存
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setPending(null);
-                      setEditPending(false);
-                    }}
-                  >
-                    丢弃
-                  </Button>
-                </div>
+                {pending.map((row, index) => (
+                  <div key={`${row.content}-${index}`} className="rounded-xl border border-accent/40 bg-surface p-4">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <h4 className="text-sm font-semibold">{row.customer || "（未识别客户）"}</h4>
+                      <Badge variant="outline">{row.type}</Badge>
+                      {row.amount != null ? <span className="text-xs font-medium">{amountText(row.amount)}</span> : null}
+                      <Badge variant="progress">待确认</Badge>
+                    </div>
+                    <p className="text-sm leading-relaxed">{row.content || "（无内容）"}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button type="button" size="sm" onClick={() => savePending(row, index)}>
+                        确认保存
+                      </Button>
+                      <Button type="button" size="sm" variant="secondary" onClick={() => setEditPendingIndex(index)}>
+                        改后存
+                      </Button>
+                      <Button type="button" size="sm" variant="ghost" onClick={() => discardPending(index)}>
+                        丢弃
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : null}
             {dayFocus ? (
@@ -783,27 +790,27 @@ export function TodoPanel() {
         </div>
       )}
 
-      <Dialog open={editPending && !!pending} onOpenChange={(open) => !open && setEditPending(false)}>
+      <Dialog open={editPendingIndex != null} onOpenChange={(open) => !open && setEditPendingIndex(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>确认并保存识别结果</DialogTitle>
             <DialogDescription>不填时间 = 默认今天 19:00，到点提醒。</DialogDescription>
           </DialogHeader>
-          {pending ? (
+          {editPendingIndex != null && pending[editPendingIndex] ? (
             <div className="grid gap-3">
               <Field label="客户">
                 <Input
-                  value={pending.customer}
+                  value={pending[editPendingIndex].customer}
                   placeholder="客户名称"
-                  onChange={(e) => setPending({ ...pending, customer: e.target.value })}
+                  onChange={(e) => updatePending(editPendingIndex, { customer: e.target.value })}
                 />
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="类型">
                   <select
                     className="h-11 w-full rounded-md border border-line bg-surface-2 px-3 text-sm"
-                    value={pending.type}
-                    onChange={(e) => setPending({ ...pending, type: e.target.value as ItemType })}
+                    value={pending[editPendingIndex].type}
+                    onChange={(e) => updatePending(editPendingIndex, { type: e.target.value as ItemType })}
                   >
                     {ITEM_TYPES.map((t) => (
                       <option key={t}>{t}</option>
@@ -813,8 +820,8 @@ export function TodoPanel() {
                 <Field label="优先级">
                   <select
                     className="h-11 w-full rounded-md border border-line bg-surface-2 px-3 text-sm"
-                    value={pending.priority || "普通"}
-                    onChange={(e) => setPending({ ...pending, priority: e.target.value as ItemPriority })}
+                    value={pending[editPendingIndex].priority || "普通"}
+                    onChange={(e) => updatePending(editPendingIndex, { priority: e.target.value as ItemPriority })}
                   >
                     {PRIORITIES.map((p) => (
                       <option key={p}>{p}</option>
@@ -824,18 +831,17 @@ export function TodoPanel() {
               </div>
               <Field label="内容">
                 <Input
-                  value={pending.content}
-                  onChange={(e) => setPending({ ...pending, content: e.target.value })}
+                  value={pending[editPendingIndex].content}
+                  onChange={(e) => updatePending(editPendingIndex, { content: e.target.value })}
                 />
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="金额">
                   <Input
                     inputMode="decimal"
-                    value={pending.amount ?? ""}
+                    value={pending[editPendingIndex].amount ?? ""}
                     onChange={(e) =>
-                      setPending({
-                        ...pending,
+                      updatePending(editPendingIndex, {
                         amount: e.target.value === "" ? null : Number(e.target.value),
                       })
                     }
@@ -844,17 +850,17 @@ export function TodoPanel() {
                 <Field label="处理时间">
                   <Input
                     type="datetime-local"
-                    value={pending.dueAt || ""}
-                    onChange={(e) => setPending({ ...pending, dueAt: e.target.value || null })}
+                    value={pending[editPendingIndex].dueAt || ""}
+                    onChange={(e) => updatePending(editPendingIndex, { dueAt: e.target.value || null })}
                   />
                 </Field>
               </div>
               <div className="mt-2 flex justify-end gap-2">
-                <Button type="button" variant="secondary" onClick={() => setEditPending(false)}>
+                <Button type="button" variant="secondary" onClick={() => setEditPendingIndex(null)}>
                   取消
                 </Button>
-                <Button type="button" onClick={() => savePending(pending)}>
-                  保存
+                <Button type="button" onClick={() => savePending(pending[editPendingIndex], editPendingIndex)}>
+                  确认保存
                 </Button>
               </div>
             </div>
